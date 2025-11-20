@@ -3,12 +3,31 @@ import { LaunchToken } from '../../services/launchMemeApi';
 import './SpotlightCard.css';
 
 type SpotlightCardProps = {
-  token: LaunchToken;
+  token?: LaunchToken;
   active?: boolean;
   onSelect?: (id: string) => void;
+  isLoading?: boolean;
 };
 
-export const SpotlightCard: React.FC<SpotlightCardProps> = ({ token, active, onSelect }) => {
+const SkeletonCard = () => (
+  <div className="spotlight-card spotlight-card--skeleton" aria-hidden="true">
+    <div className="skeleton-tag" />
+    <div className="skeleton-line" style={{ width: '70%' }} />
+    <div className="skeleton-line" style={{ width: '50%' }} />
+    <div className="skeleton-line" style={{ width: '40%' }} />
+    <div className="skeleton-footer">
+      <span className="skeleton-line" style={{ width: '30%' }} />
+      <span className="skeleton-line" style={{ width: '45%' }} />
+      <span className="skeleton-line" style={{ width: '35%' }} />
+    </div>
+  </div>
+);
+
+export const SpotlightCard: React.FC<SpotlightCardProps> = ({ token, active, onSelect, isLoading }) => {
+  if (isLoading || !token) {
+    return <SkeletonCard />;
+  }
+
   return (
     <button
       className={`spotlight-card ${active ? 'spotlight-card--active' : ''}`}

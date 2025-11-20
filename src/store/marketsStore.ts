@@ -39,6 +39,8 @@ type MarketsStore = {
 
 const MAX_TOKENS = 120;
 
+const isFallbackToken = (token: LaunchToken) => Boolean(token.isFallback || token.raw?.isFallback);
+
 const recalcPulse = (tokens: LaunchToken[]): LaunchMarketPulse | null => {
     if (!tokens.length) {
         return null;
@@ -72,6 +74,14 @@ const upsertToken = (list: LaunchToken[], token: LaunchToken): LaunchToken[] => 
     return appended.length > MAX_TOKENS ? appended.slice(appended.length - MAX_TOKENS) : appended;
 };
 
+const pruneFallback = (tokens: LaunchToken[]) => {
+    const hasReal = tokens.some((token) => !isFallbackToken(token));
+    if (!hasReal) {
+        return tokens;
+    }
+    return tokens.filter((token) => !isFallbackToken(token));
+};
+
 const syncQueryCache = (tokens: LaunchToken[]) => {
     queryClient.setQueryData(['tokens', 'spotlight'], tokens);
 };
@@ -86,12 +96,19 @@ export const useMarketsStore = create<MarketsStore>((set, get) => ({
     isLoadingSnapshot: true,
 
     setSpotlight: (tokens: LaunchToken[]) => {
-        set((state) => ({
-            spotlight: tokens,
-            selectedToken: state.selectedToken ?? tokens[0],
-            pulse: recalcPulse(tokens)
-        }));
-        syncQueryCache(tokens);
+        const sanitized = pruneFallback(tokens);
+        set((state) => {
+            const nextSelected =
+                state.selectedToken && sanitized.some((token) => token.id === state.selectedToken?.id)
+                    ? state.selectedToken
+                    : sanitized[0] ?? state.selectedToken;
+            return {
+                spotlight: sanitized,
+                selectedToken: nextSelected,
+                pulse: recalcPulse(sanitized)
+            };
+        });
+        syncQueryCache(sanitized);
     },
 
     selectToken: async (tokenId: string) => {
@@ -140,13 +157,14 @@ export const useMarketsStore = create<MarketsStore>((set, get) => ({
                             }
                             : token
                     );
-                    syncQueryCache(updated);
-                    return { spotlight: updated, pulse: recalcPulse(updated) };
+                    const sanitized = pruneFallback(updated);
+                    syncQueryCache(sanitized);
+                    return { spotlight: sanitized, pulse: recalcPulse(sanitized) };
                 });
             },
             onTokenUpdate: (token) => {
                 set((state) => {
-                    const updated = upsertToken(state.spotlight, token);
+                    const updated = pruneFallback(upsertToken(state.spotlight, token));
                     syncQueryCache(updated);
                     return { spotlight: updated, pulse: recalcPulse(updated) };
                 });
@@ -154,7 +172,7 @@ export const useMarketsStore = create<MarketsStore>((set, get) => ({
             onMint: (token) => {
                 addPulseFeed('system', `🆕 Minted ${token.symbol}`);
                 set((state) => {
-                    const updated = upsertToken(state.spotlight, token);
+                    const updated = pruneFallback(upsertToken(state.spotlight, token));
                     syncQueryCache(updated);
                     return { spotlight: updated, pulse: recalcPulse(updated) };
                 });

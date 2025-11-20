@@ -2,7 +2,10 @@
   display: flex;
   flex-direction: column;
   gap: 32px;
+  padding: clamp(16px, 4vw, 48px);
   padding-bottom: 120px;
+  width: min(1280px, 100%);
+  margin: 0 auto;
 }
 
 .launchpad-hero {
@@ -63,8 +66,35 @@
 
 .spotlight-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 20px;
+  position: relative;
+}
+
+.spotlight-grid--busy::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  background: rgba(15, 23, 42, 0.2);
+  pointer-events: none;
+  animation: pulse-bg 1.6s ease-in-out infinite;
+}
+
+.spotlight-empty {
+  grid-column: 1 / -1;
+  padding: 40px 24px;
+  border-radius: 24px;
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+  text-align: center;
+  color: rgba(226, 232, 240, 0.8);
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.spotlight-empty small {
+  display: block;
+  margin-top: 8px;
+  color: rgba(148, 163, 184, 0.8);
 }
 
 .terminal-wrapper {
@@ -188,5 +218,38 @@
 
   .launchpad-hero__intro {
     padding: 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .spotlight-grid {
+    grid-auto-flow: column;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+
+  .terminal-right {
+    order: -1;
+  }
+
+  .order-form,
+  .portfolio-card,
+  .market-terminal {
+    padding: 18px;
+  }
+
+  .wallet-toolbar-actions {
+    gap: 6px;
+  }
+}
+
+@keyframes pulse-bg {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
   }
 }

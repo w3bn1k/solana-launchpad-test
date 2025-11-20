@@ -42,7 +42,11 @@ const Tab1: React.FC = () => {
   const disconnectStreams = useMarketsStore((state) => state.disconnectStreams);
   const refreshSelected = useMarketsStore((state) => state.refreshSelected);
   const isLoadingSnapshot = useMarketsStore((state) => state.isLoadingSnapshot);
-  const { data: spotlightTokens = [] } = useSpotlightTokens();
+  const {
+    data: spotlightTokens = [],
+    isLoading: isSpotlightLoading,
+    isFetching: isSpotlightFetching
+  } = useSpotlightTokens();
 
   const [orderIntent, setOrderIntent] = useState<'market' | 'limit'>('market');
   const [orderCurrency, setOrderCurrency] = useState<'SOL' | 'USDC'>('SOL');
@@ -71,6 +75,8 @@ const Tab1: React.FC = () => {
       useMarketsStore.getState().selectToken(spotlightTokens[0].id);
     }
   }, [spotlightTokens, setSpotlight]);
+
+  const showSkeletonCards = isSpotlightLoading && spotlight.length === 0;
 
   const handleOrderSubmit = async () => {
     if (!selectedToken) {
@@ -165,15 +171,26 @@ const Tab1: React.FC = () => {
             </div>
           </section>
 
-          <section className="spotlight-grid">
-            {spotlight.map((token) => (
-              <SpotlightCard
-                key={token.id}
-                token={token}
-                active={token.id === selectedToken?.id}
-                onSelect={(id) => selectToken(id)}
-              />
-            ))}
+          <section className={`spotlight-grid ${isSpotlightFetching ? 'spotlight-grid--busy' : ''}`}>
+            {showSkeletonCards &&
+              Array.from({ length: 4 }).map((_, idx) => <SpotlightCard key={`skeleton-${idx}`} isLoading />)}
+
+            {!showSkeletonCards &&
+              spotlight.map((token) => (
+                <SpotlightCard
+                  key={token.id}
+                  token={token}
+                  active={token.id === selectedToken?.id}
+                  onSelect={(id) => selectToken(id)}
+                />
+              ))}
+
+            {!showSkeletonCards && spotlight.length === 0 && (
+              <div className="spotlight-empty">
+                <p>No live tokens right now</p>
+                <small>Stay tuned — new launches appear here instantly.</small>
+              </div>
+            )}
           </section>
 
           <section className="terminal-wrapper">
@@ -184,6 +201,7 @@ const Tab1: React.FC = () => {
               pulseFeed={pulseFeed}
               streamStatus={streamStatus}
               onRefreshSnapshot={() => refreshSelected()}
+              isLoading={isLoadingSnapshot}
             />
 
             <div className="terminal-right">

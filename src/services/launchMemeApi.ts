@@ -40,6 +40,7 @@ export type LaunchToken = {
     iconUrl?: string;
     bannerUrl?: string;
     createdAt: string;
+    isFallback?: boolean;
     raw?: RawLaunchToken;
 };
 
@@ -91,7 +92,19 @@ const fallbackTokens: LaunchToken[] = [
         network: 'Solana',
         score: 92,
         bannerUrl: 'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1400&q=80',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        isFallback: true,
+        raw: {
+            token: 'vibe-001',
+            name: 'Vibe Chain',
+            symbol: 'VIBE',
+            priceUsd: 0.023,
+            _balanceSol: 125_000,
+            holders: 92,
+            metadataUri: '',
+            photo: null,
+            isFallback: true
+        } as RawLaunchToken
     },
     {
         id: 'meme-777',
@@ -108,7 +121,19 @@ const fallbackTokens: LaunchToken[] = [
         network: 'Solana',
         score: 81,
         bannerUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        isFallback: true,
+        raw: {
+            token: 'meme-777',
+            name: 'Neon Cat',
+            symbol: 'NEON',
+            priceUsd: 0.0042,
+            _balanceSol: 87_000,
+            holders: 81,
+            metadataUri: '',
+            photo: null,
+            isFallback: true
+        } as RawLaunchToken
     },
     {
         id: 'pulse-404',
@@ -125,7 +150,19 @@ const fallbackTokens: LaunchToken[] = [
         network: 'Solana',
         score: 97,
         bannerUrl: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1400&q=80',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        isFallback: true,
+        raw: {
+            token: 'pulse-404',
+            name: 'Quantum Pepe',
+            symbol: 'QPEPE',
+            priceUsd: 0.000093,
+            _balanceSol: 210_000,
+            holders: 97,
+            metadataUri: '',
+            photo: null,
+            isFallback: true
+        } as RawLaunchToken
     }
 ];
 
