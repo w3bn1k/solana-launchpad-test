@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
-  IonAlert,
   IonButton,
   IonButtons,
   IonChip,
@@ -9,136 +8,135 @@ import {
   IonIcon,
   IonPage,
   IonTitle,
-  IonToast,
   IonToolbar
 } from '@ionic/react';
-import { flash, sparkles, wifi, wallet, logOut, key, refresh } from 'ionicons/icons';
+import { refresh, sparkles } from 'ionicons/icons';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useSolana } from '../context/SolanaContext';
-import { usePrivyAuth } from '../context/PrivyContext';
-import { usePrivySolana } from '../hooks/usePrivySolana';
 import { useSpotlightTokens } from '../hooks/useSpotlightTokens';
-import { SpotlightCard } from '../components/terminal/SpotlightCard';
-import { MarketTerminal } from '../components/terminal/MarketTerminal';
-import { useMarketsStore } from '../store/marketsStore';
-import { submitLaunchOrder } from '../services/launchMemeApi';
+import { LaunchToken } from '../services/launchMemeApi';
+import { usePrivySolana } from '../hooks/usePrivySolana';
 import './Tab1.css';
 
+const formatNumber = (value: number, options: Intl.NumberFormatOptions = {}) =>
+  new Intl.NumberFormat('en-US', { maximumFractionDigits: 2, ...options }).format(value);
+
 const Tab1: React.FC = () => {
-  const { sdk, walletState, switchNetwork } = useSolana();
-  const { login, logout, authenticated, user, ready } = usePrivyAuth();
+  const { sdk } = useSolana();
   usePrivySolana();
 
-  const spotlight = useMarketsStore((state) => state.spotlight);
-  const selectedToken = useMarketsStore((state) => state.selectedToken);
-  const pulse = useMarketsStore((state) => state.pulse);
-  const orderbook = useMarketsStore((state) => state.orderbook);
-  const trades = useMarketsStore((state) => state.trades);
-  const streamStatus = useMarketsStore((state) => state.streamStatus);
-  const pulseFeed = useMarketsStore((state) => state.pulseFeed);
-  const setSpotlight = useMarketsStore((state) => state.setSpotlight);
-  const selectToken = useMarketsStore((state) => state.selectToken);
-  const connectStreams = useMarketsStore((state) => state.connectStreams);
-  const disconnectStreams = useMarketsStore((state) => state.disconnectStreams);
-  const refreshSelected = useMarketsStore((state) => state.refreshSelected);
-  const isLoadingSnapshot = useMarketsStore((state) => state.isLoadingSnapshot);
   const {
-    data: spotlightTokens = [],
-    isLoading: isSpotlightLoading,
-    isFetching: isSpotlightFetching
+    data: tokens = [],
+    isLoading,
+    isFetching,
+    refetch
   } = useSpotlightTokens();
 
-  const [orderIntent, setOrderIntent] = useState<'market' | 'limit'>('market');
-  const [orderCurrency, setOrderCurrency] = useState<'SOL' | 'USDC'>('SOL');
-  const [orderAmount, setOrderAmount] = useState('');
-  const [orderToast, setOrderToast] = useState<{ open: boolean; message: string; color?: string }>({
-    open: false,
-    message: ''
-  });
-  const [showNetworkAlert, setShowNetworkAlert] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const summary = useMemo(() => {
+    if (!tokens.length) {
+      return {
+        totalLiquiditySol: 0,
+        totalVolumeUsd: 0,
+        avgProgress: 0,
+        avgChange: 0,
+        totalHolders: 0
+      };
+    }
 
-  useEffect(() => {
-    connectStreams();
-    return () => {
-      disconnectStreams();
+    const totalLiquiditySol = tokens.reduce((sum, token) => sum + (token.liquidity ?? 0), 0);
+    const totalVolumeUsd = tokens.reduce((sum, token) => sum + (token.volume24h ?? 0), 0);
+    const avgProgress =
+      tokens.reduce((sum, token) => sum + (token.progress ?? 0), 0) / tokens.length;
+    const avgChange =
+      tokens.reduce((sum, token) => sum + (token.change24h ?? 0), 0) / tokens.length;
+    const totalHolders = tokens.reduce(
+      (sum, token) => sum + (token.raw?.holders ?? token.score ?? 0),
+      0
+    );
+
+    return {
+      totalLiquiditySol,
+      totalVolumeUsd,
+      avgProgress,
+      avgChange,
+      totalHolders
     };
-  }, [connectStreams, disconnectStreams]);
+  }, [tokens]);
 
-  useEffect(() => {
-    if (!spotlightTokens.length) {
-      return;
-    }
-    setSpotlight(spotlightTokens);
-    const { selectedToken: currentSelected } = useMarketsStore.getState();
-    if (!currentSelected && spotlightTokens[0]) {
-      useMarketsStore.getState().selectToken(spotlightTokens[0].id);
-    }
-  }, [spotlightTokens, setSpotlight]);
+  const leaders = useMemo(() => {
+    return tokens
+      .slice()
+      .sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0))
+      .slice(0, 6);
+  }, [tokens]);
 
-  const showSkeletonCards = isSpotlightLoading && spotlight.length === 0;
-
-  const handleOrderSubmit = async () => {
-    if (!selectedToken) {
-      setOrderToast({ open: true, message: 'Select a token first', color: 'warning' });
-      return;
-    }
-
-    if (!walletState.connected || !walletState.publicKey) {
-      setOrderToast({ open: true, message: 'Connect your wallet', color: 'warning' });
-      return;
-    }
-
-    const payload = {
-      tokenId: selectedToken.id,
-      amount: Number(orderAmount),
-      currency: orderCurrency,
-      intent: orderIntent,
-      walletAddress: walletState.publicKey.toString(),
-      slippageBps: 50
-    };
-
-    const result = await submitLaunchOrder(payload);
-    if (result.success) {
-      setOrderToast({ open: true, message: 'Participation queued ✅', color: 'success' });
-      setOrderAmount('');
-      refreshSelected();
-    } else {
-      setOrderToast({ open: true, message: 'Order failed. Check logs', color: 'danger' });
-    }
-  };
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await refreshSelected();
-    setRefreshing(false);
-  };
-
-  const heroStats = useMemo(
-    () => [
-      { label: 'Total TVL', value: pulse ? `$${pulse.tvl.toLocaleString()}` : '—' },
-      { label: 'Participants', value: pulse ? pulse.participants.toLocaleString() : '—' },
-      { label: 'Avg. APR', value: pulse ? `${pulse.avgApr.toFixed(1)}%` : '—' },
-      { label: 'Hot Network', value: pulse?.hotNetwork ?? 'Solana' }
-    ],
-    [pulse]
-  );
+  const lastUpdated = useMemo(() => {
+    if (!tokens.length) return null;
+    const latest = tokens
+      .slice()
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt ?? Date.now()).getTime() -
+          new Date(a.createdAt ?? Date.now()).getTime()
+      )[0];
+    return latest
+      ? new Date(latest.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : null;
+  }, [tokens]);
 
   const currentNetwork = sdk.wallet.getCurrentNetwork();
+
+  const metricCards = [
+    {
+      label: 'Active tokens',
+      value: tokens.length ? tokens.length.toLocaleString() : '—',
+      sublabel: 'Spotlight list'
+    },
+    {
+      label: 'Total liquidity (◎)',
+      value: summary.totalLiquiditySol
+        ? formatNumber(summary.totalLiquiditySol, { maximumFractionDigits: 0 })
+        : '—',
+      sublabel: 'Across spotlight pools'
+    },
+    {
+      label: '24h volume (USD)',
+      value: summary.totalVolumeUsd
+        ? `$${formatNumber(summary.totalVolumeUsd, { maximumFractionDigits: 0 })}`
+        : '—',
+      sublabel: 'Reported by API'
+    },
+    {
+      label: 'Avg. progress',
+      value: `${summary.avgProgress ? summary.avgProgress.toFixed(1) : '0.0'}%`,
+      sublabel: 'Towards pump.fun migration'
+    },
+    {
+      label: 'Avg. change',
+      value: `${summary.avgChange ? summary.avgChange.toFixed(2) : '0.00'}%`,
+      sublabel: 'Rolling 24h'
+    },
+    {
+      label: 'Total holders',
+      value: summary.totalHolders ? summary.totalHolders.toLocaleString() : '—',
+      sublabel: 'Approximate wallet count'
+    }
+  ];
 
   return (
     <IonPage>
       <IonHeader translucent>
         <IonToolbar color="transparent">
-          <IonTitle>Launch.Meme Terminal</IonTitle>
+          <IonTitle>Launch.Meme Telemetry</IonTitle>
           <IonButtons slot="end" className="wallet-toolbar-actions">
-            {walletState.connected && (
-              <IonButton fill="clear" onClick={handleRefresh} disabled={refreshing}>
-                <IonIcon icon={refresh} />
-              </IonButton>
-            )}
-            <IonButton fill="clear" onClick={() => setShowNetworkAlert(true)}>
-              <IonChip color="primary">{currentNetwork.name}</IonChip>
+            <IonChip color="primary">{currentNetwork.name}</IonChip>
+            <IonButton
+              fill="clear"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="toolbar-refresh"
+            >
+              <IonIcon icon={refresh} slot="icon-only" />
             </IonButton>
             <div className="wallet-kit-button">
               <WalletMultiButton />
@@ -149,163 +147,104 @@ const Tab1: React.FC = () => {
 
       <IonContent fullscreen>
         <div className="launchpad-page">
-          <section className="launchpad-hero">
+          <section className="launchpad-hero launchpad-hero--simple">
             <div className="launchpad-hero__intro">
               <IonChip color="secondary">
                 <IonIcon icon={sparkles} />
-                Live launchpad
+                Live feed
               </IonChip>
-              <h1>Trade the vibe-first meme launches</h1>
+              <h1>Live health of launch.meme pools</h1>
               <p>
-                Curated Solana memecoins, realtime orderflow, and guided participation flows for both keyboard warriors and mobile-first creators.
+                Data comes straight from <code>https://launch.meme/api/tokens</code> using the
+                provided Centrifuge token. Every metric reflects the current backend response —
+                nothing is mocked.
               </p>
+              <div className="hero-actions">
+                <IonButton fill="outline" onClick={() => refetch()} disabled={isFetching}>
+                  <IonIcon slot="start" icon={refresh} />
+                  {isFetching ? 'Updating…' : 'Refresh data'}
+                </IonButton>
+                <span className="hero-updated">Last updated {lastUpdated ?? '—'}</span>
+              </div>
             </div>
 
-            <div className="launchpad-hero__stats">
-              {heroStats.map((stat) => (
-                <div key={stat.label} className="hero-stat">
-                  <p>{stat.label}</p>
-                  <strong>{stat.value}</strong>
+            <div className="launchpad-hero__stats launchpad-hero__stats--condensed">
+              {metricCards.map((card) => (
+                <div key={card.label} className="hero-stat hero-stat--wide">
+                  <p>{card.label}</p>
+                  <strong>{card.value}</strong>
+                  <span>{card.sublabel}</span>
                 </div>
               ))}
             </div>
           </section>
 
-          <section className={`spotlight-grid ${isSpotlightFetching ? 'spotlight-grid--busy' : ''}`}>
-            {showSkeletonCards &&
-              Array.from({ length: 4 }).map((_, idx) => <SpotlightCard key={`skeleton-${idx}`} isLoading />)}
+          <section className="metrics-panel">
+            <header className="metrics-panel__header">
+              <div>
+                <p>Leaders</p>
+                <strong>Top pools by reported USD volume</strong>
+              </div>
+              <IonChip color="dark">
+                {isLoading ? 'Loading…' : `${leaders.length} highlighted`}
+              </IonChip>
+            </header>
 
-            {!showSkeletonCards &&
-              spotlight.map((token) => (
-                <SpotlightCard
-                  key={token.id}
-                  token={token}
-                  active={token.id === selectedToken?.id}
-                  onSelect={(id) => selectToken(id)}
-                />
-              ))}
-
-            {!showSkeletonCards && spotlight.length === 0 && (
-              <div className="spotlight-empty">
-                <p>No live tokens right now</p>
-                <small>Stay tuned — new launches appear here instantly.</small>
+            {isLoading ? (
+              <div className="leaders-skeleton">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <div key={`skeleton-${idx}`} className="leaders-skeleton__row">
+                    <span className="skeleton-line" style={{ width: '40%' }} />
+                    <span className="skeleton-line" style={{ width: '20%' }} />
+                    <span className="skeleton-line" style={{ width: '20%' }} />
+                    <span className="skeleton-line" style={{ width: '15%' }} />
+                  </div>
+                ))}
+              </div>
+            ) : leaders.length ? (
+              <ul className="leaders-table">
+                {leaders.map((token: LaunchToken) => (
+                  <li key={token.id}>
+                    <div className="leader-token">
+                      <p>{token.name}</p>
+                      <small>{token.symbol}</small>
+                    </div>
+                    <div className="leader-metric">
+                      <span>${token.priceUsd.toFixed(6)}</span>
+                      <small>Price</small>
+                    </div>
+                    <div className="leader-metric">
+                      <span>
+                        {token.change24h >= 0 ? '+' : ''}
+                        {token.change24h.toFixed(2)}%
+                      </span>
+                      <small>24h</small>
+                    </div>
+                    <div className="leader-metric">
+                      <span>
+                        ${formatNumber(token.volume24h ?? 0, { maximumFractionDigits: 0 })}
+                      </span>
+                      <small>Volume</small>
+                    </div>
+                    <div className="leader-metric">
+                      <span>{formatNumber(token.progress ?? 0, { maximumFractionDigits: 1 })}%</span>
+                      <small>Progress</small>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="empty-state">
+                No spotlight tokens returned from the API. Verify the Centrifuge token or refresh the
+                feed later.
               </div>
             )}
           </section>
-
-          <section className="terminal-wrapper">
-            <MarketTerminal
-              token={selectedToken}
-              orderbook={orderbook}
-              trades={trades}
-              pulseFeed={pulseFeed}
-              streamStatus={streamStatus}
-              onRefreshSnapshot={() => refreshSelected()}
-              isLoading={isLoadingSnapshot}
-            />
-
-            <div className="terminal-right">
-              <div className="order-form">
-                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h3>Join {selectedToken?.symbol ?? 'Pool'}</h3>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#94a3b8' }}>
-                    <IonIcon icon={wifi} /> Stream {streamStatus}
-                  </span>
-                </header>
-
-                {!authenticated && (
-                  <IonButton fill="outline" onClick={login} disabled={!ready}>
-                    <IonIcon slot="start" icon={key} />
-                    Login with Privy
-                  </IonButton>
-                )}
-
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    handleOrderSubmit();
-                  }}
-                >
-                  <label>
-                    Intent
-                    <select value={orderIntent} onChange={(e) => setOrderIntent(e.target.value as 'market' | 'limit')}>
-                      <option value="market">Instant (market)</option>
-                      <option value="limit">Set target (limit)</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    Currency
-                    <select value={orderCurrency} onChange={(e) => setOrderCurrency(e.target.value as 'SOL' | 'USDC')}>
-                      <option value="SOL">SOL</option>
-                      <option value="USDC">USDC</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    Amount
-                    <input
-                      type="number"
-                      min="0"
-                      value={orderAmount}
-                      onChange={(e) => setOrderAmount(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </label>
-
-                  <button type="submit" disabled={isLoadingSnapshot}>
-                    <IonIcon icon={flash} />
-                    &nbsp; Commit Liquidity
-                  </button>
-                </form>
-              </div>
-
-              <div className="portfolio-card">
-                <h3>Wallet cockpit</h3>
-                {walletState.connected && walletState.publicKey ? (
-                  <ul>
-                    <li>
-                      <span>Address</span>
-                      <span>{walletState.publicKey.toBase58().slice(0, 4)}...{walletState.publicKey.toBase58().slice(-4)}</span>
-                    </li>
-                    <li>
-                      <span>Network</span>
-                      <span>{currentNetwork.name}</span>
-                    </li>
-                    <li>
-                      <span>Mode</span>
-                      <span>{orderIntent.toUpperCase()}</span>
-                    </li>
-                  </ul>
-                ) : (
-                  <p>Connect your Solana wallet or use demo mode to mirror flows.</p>
-                )}
-              </div>
-            </div>
-          </section>
         </div>
-
-        <IonAlert
-          isOpen={showNetworkAlert}
-          onDidDismiss={() => setShowNetworkAlert(false)}
-          header="Select Network"
-          buttons={[
-            { text: 'Cancel', role: 'cancel' },
-            { text: 'Mainnet', handler: () => switchNetwork('mainnet-beta') },
-            { text: 'Testnet', handler: () => switchNetwork('testnet') }
-          ]}
-        />
-
-        <IonToast
-          isOpen={orderToast.open}
-          message={orderToast.message}
-          color={orderToast.color}
-          duration={2000}
-          onDidDismiss={() => setOrderToast((prev) => ({ ...prev, open: false }))}
-        />
       </IonContent>
     </IonPage>
   );
 };
 
 export default Tab1;
+
