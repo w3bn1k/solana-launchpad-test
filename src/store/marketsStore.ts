@@ -1,10 +1,8 @@
 import { create } from 'zustand';
 import dayjs from 'dayjs';
 import {
-    fetchMarketPulse,
     fetchOrderbook,
     fetchRecentTrades,
-    fetchSpotlightTokens,
     fetchTokenDetail,
     LaunchMarketPulse,
     LaunchOrderbookLevel,
@@ -12,6 +10,7 @@ import {
     LaunchTrade
 } from '../services/launchMemeApi';
 import { launchMemeStream, OrderbookUpdate, TradeStreamUpdate, TickerUpdate } from '../services/launchMemeStream';
+import { queryClient } from '../lib/queryClient';
 
 export type StreamStatus = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -31,11 +30,50 @@ type MarketsStore = {
     streamStatus: StreamStatus;
     pulseFeed: PulseFeedItem[];
     isLoadingSnapshot: boolean;
-    hydrate: () => Promise<void>;
+    setSpotlight: (tokens: LaunchToken[]) => void;
     selectToken: (tokenId: string) => Promise<void>;
     connectStreams: () => void;
     disconnectStreams: () => void;
     refreshSelected: () => Promise<void>;
+};
+
+const MAX_TOKENS = 120;
+
+const recalcPulse = (tokens: LaunchToken[]): LaunchMarketPulse | null => {
+    if (!tokens.length) {
+        return null;
+    }
+
+    const tvl = tokens.reduce((sum, token) => sum + (token.liquidity ?? 0), 0);
+    const participants = tokens.reduce(
+        (sum, token) => sum + (token.raw?.holders ?? token.score ?? 0),
+        0
+    );
+    const avgApr =
+        tokens.reduce((sum, token) => sum + (token.change24h ?? 0), 0) / tokens.length;
+
+    return {
+        tvl,
+        participants,
+        avgApr,
+        hotNetwork: 'Solana',
+        updatedAt: new Date().toISOString()
+    };
+};
+
+const upsertToken = (list: LaunchToken[], token: LaunchToken): LaunchToken[] => {
+    const index = list.findIndex((item) => item.id === token.id);
+    if (index >= 0) {
+        const next = [...list];
+        next[index] = { ...next[index], ...token };
+        return next;
+    }
+    const appended = [...list, token];
+    return appended.length > MAX_TOKENS ? appended.slice(appended.length - MAX_TOKENS) : appended;
+};
+
+const syncQueryCache = (tokens: LaunchToken[]) => {
+    queryClient.setQueryData(['tokens', 'spotlight'], tokens);
 };
 
 export const useMarketsStore = create<MarketsStore>((set, get) => ({
@@ -47,15 +85,13 @@ export const useMarketsStore = create<MarketsStore>((set, get) => ({
     pulseFeed: [],
     isLoadingSnapshot: true,
 
-    hydrate: async () => {
-        set({ isLoadingSnapshot: true });
-        const [tokens, pulse] = await Promise.all([fetchSpotlightTokens(), fetchMarketPulse()]);
-        const selected = get().selectedToken ?? tokens[0];
-        set({ spotlight: tokens, pulse, selectedToken: selected, isLoadingSnapshot: false });
-        if (selected) {
-            await get().refreshSelected();
-            launchMemeStream.subscribeOrderbook(selected.id);
-        }
+    setSpotlight: (tokens: LaunchToken[]) => {
+        set((state) => ({
+            spotlight: tokens,
+            selectedToken: state.selectedToken ?? tokens[0],
+            pulse: recalcPulse(tokens)
+        }));
+        syncQueryCache(tokens);
     },
 
     selectToken: async (tokenId: string) => {
@@ -91,8 +127,8 @@ export const useMarketsStore = create<MarketsStore>((set, get) => ({
         launchMemeStream.connect({
             onStatusChange: (status) => set({ streamStatus: status }),
             onTicker: (ticker: TickerUpdate) => {
-                set((state) => ({
-                    spotlight: state.spotlight.map((token) =>
+                set((state) => {
+                    const updated = state.spotlight.map((token) =>
                         token.id === ticker.tokenId
                             ? {
                                 ...token,
@@ -103,24 +139,25 @@ export const useMarketsStore = create<MarketsStore>((set, get) => ({
                                 liquidity: ticker.liquidity ?? token.liquidity
                             }
                             : token
-                    )
-                }));
+                    );
+                    syncQueryCache(updated);
+                    return { spotlight: updated, pulse: recalcPulse(updated) };
+                });
             },
             onTokenUpdate: (token) => {
                 set((state) => {
-                    const exists = state.spotlight.some((item) => item.id === token.id);
-                    return {
-                        spotlight: exists
-                            ? state.spotlight.map((item) => (item.id === token.id ? { ...item, ...token } : item))
-                            : [token, ...state.spotlight]
-                    };
+                    const updated = upsertToken(state.spotlight, token);
+                    syncQueryCache(updated);
+                    return { spotlight: updated, pulse: recalcPulse(updated) };
                 });
             },
             onMint: (token) => {
                 addPulseFeed('system', `🆕 Minted ${token.symbol}`);
-                set((state) => ({
-                    spotlight: [token, ...state.spotlight].slice(0, 40)
-                }));
+                set((state) => {
+                    const updated = upsertToken(state.spotlight, token);
+                    syncQueryCache(updated);
+                    return { spotlight: updated, pulse: recalcPulse(updated) };
+                });
             },
             onOrderbook: (update: OrderbookUpdate) => {
                 const selected = get().selectedToken;

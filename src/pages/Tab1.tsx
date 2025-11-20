@@ -17,6 +17,7 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useSolana } from '../context/SolanaContext';
 import { usePrivyAuth } from '../context/PrivyContext';
 import { usePrivySolana } from '../hooks/usePrivySolana';
+import { useSpotlightTokens } from '../hooks/useSpotlightTokens';
 import { SpotlightCard } from '../components/terminal/SpotlightCard';
 import { MarketTerminal } from '../components/terminal/MarketTerminal';
 import { useMarketsStore } from '../store/marketsStore';
@@ -35,12 +36,13 @@ const Tab1: React.FC = () => {
   const trades = useMarketsStore((state) => state.trades);
   const streamStatus = useMarketsStore((state) => state.streamStatus);
   const pulseFeed = useMarketsStore((state) => state.pulseFeed);
-  const hydrate = useMarketsStore((state) => state.hydrate);
+  const setSpotlight = useMarketsStore((state) => state.setSpotlight);
   const selectToken = useMarketsStore((state) => state.selectToken);
   const connectStreams = useMarketsStore((state) => state.connectStreams);
   const disconnectStreams = useMarketsStore((state) => state.disconnectStreams);
   const refreshSelected = useMarketsStore((state) => state.refreshSelected);
   const isLoadingSnapshot = useMarketsStore((state) => state.isLoadingSnapshot);
+  const { data: spotlightTokens = [] } = useSpotlightTokens();
 
   const [orderIntent, setOrderIntent] = useState<'market' | 'limit'>('market');
   const [orderCurrency, setOrderCurrency] = useState<'SOL' | 'USDC'>('SOL');
@@ -53,12 +55,22 @@ const Tab1: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    hydrate();
     connectStreams();
     return () => {
       disconnectStreams();
     };
-  }, [hydrate, connectStreams, disconnectStreams]);
+  }, [connectStreams, disconnectStreams]);
+
+  useEffect(() => {
+    if (!spotlightTokens.length) {
+      return;
+    }
+    setSpotlight(spotlightTokens);
+    const { selectedToken: currentSelected } = useMarketsStore.getState();
+    if (!currentSelected && spotlightTokens[0]) {
+      useMarketsStore.getState().selectToken(spotlightTokens[0].id);
+    }
+  }, [spotlightTokens, setSpotlight]);
 
   const handleOrderSubmit = async () => {
     if (!selectedToken) {
