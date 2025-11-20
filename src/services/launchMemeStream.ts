@@ -64,17 +64,33 @@ class LaunchMemeStream {
         if (!this.centrifuge) return;
 
         this.subscribeToChannel('tokenUpdates', (ctx: PublicationContext) => {
-            const token = mapTokenFromStream(ctx.data);
+            const data = ctx.data as any;
+
+            // Логируем для отладки (можно убрать в продакшене)
+            if (process.env.NODE_ENV === 'development') {
+                console.log('[WebSocket] tokenUpdates received:', {
+                    token: data?.token,
+                    change24h: data?.change24h,
+                    progress: data?.progress,
+                    volumeUsd: data?.volumeUsd
+                });
+            }
+
+            const token = mapTokenFromStream(data);
+
+            // Всегда вызываем onTokenUpdate с полными данными
             if (token) {
                 this.callbacks.onTokenUpdate?.(token);
             }
-            if (ctx.data?.priceUsd) {
+
+            // Также вызываем onTicker для быстрых обновлений цен
+            if (data?.token && (data?.priceUsd !== undefined || data?.price !== undefined)) {
                 this.callbacks.onTicker?.({
-                    tokenId: ctx.data.token,
-                    price: ctx.data.priceUsd,
-                    change24h: ctx.data.change24h ?? 0,
-                    volume24h: ctx.data.volumeUsd ?? 0,
-                    liquidity: ctx.data._balanceSol
+                    tokenId: data.token,
+                    price: data.priceUsd ?? data.price ?? 0,
+                    change24h: data.change24h ?? 0,
+                    volume24h: data.volumeUsd ?? data.volume24h ?? 0,
+                    liquidity: data._balanceSol ?? data.liquidity
                 });
             }
         });

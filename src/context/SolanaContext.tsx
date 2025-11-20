@@ -44,34 +44,47 @@ export const SolanaProvider: React.FC<SolanaProviderProps> = ({ children }) => {
     return unsubscribe;
   }, [sdk]);
 
+
   useEffect(() => {
     if (wallet.connected && wallet.publicKey) {
       const currentKey = wallet.publicKey.toBase58();
       if (currentKey === lastConnectedKeyRef.current) return;
       lastConnectedKeyRef.current = currentKey;
 
-      const adapter = {
-        publicKey: wallet.publicKey,
-        signTransaction: async (tx: Parameters<NonNullable<typeof wallet.signTransaction>>[0]) => {
-          if (!wallet.signTransaction) {
-            throw new Error('Wallet does not support transaction signing');
-          }
-          return wallet.signTransaction(tx);
-        },
-        signAllTransactions: async (txs: Parameters<NonNullable<typeof wallet.signAllTransactions>>[0]) => {
-          if (!wallet.signAllTransactions) {
-            throw new Error('Wallet does not support batch signing');
-          }
-          return wallet.signAllTransactions(txs);
+      // Sync with SDK wallet manager
+      const syncWithSDK = async () => {
+        try {
+          const adapter = {
+            publicKey: wallet.publicKey!,
+            signTransaction: async (tx: Parameters<NonNullable<typeof wallet.signTransaction>>[0]) => {
+              if (!wallet.signTransaction) {
+                throw new Error('Wallet does not support transaction signing');
+              }
+              return wallet.signTransaction(tx);
+            },
+            signAllTransactions: async (txs: Parameters<NonNullable<typeof wallet.signAllTransactions>>[0]) => {
+              if (!wallet.signAllTransactions) {
+                throw new Error('Wallet does not support batch signing');
+              }
+              return wallet.signAllTransactions(txs);
+            }
+          };
+
+          await sdk.wallet.connectCustomWallet(
+            wallet.wallet?.adapter.name || 'Solana Wallet',
+            adapter
+          );
+          setError(null);
+        } catch (err) {
+          // Don't set error for sync failures - wallet is still connected via adapter
+          console.warn('Wallet SDK sync error (non-critical):', err);
         }
       };
 
-      sdk.wallet
-        .connectCustomWallet(wallet.wallet?.adapter.name || 'Solana Wallet', adapter)
-        .catch((err) => setError(err instanceof Error ? err.message : 'Wallet sync failed'));
+      syncWithSDK();
     } else {
       lastConnectedKeyRef.current = null;
-      if (walletState.wallet?.type === 'custom') {
+      if (walletState.wallet?.type === 'custom' && !wallet.connected) {
         sdk.wallet.disconnectWallet().catch((err) => {
           console.error('Failed to disconnect custom wallet', err);
         });
@@ -87,20 +100,74 @@ export const SolanaProvider: React.FC<SolanaProviderProps> = ({ children }) => {
     walletState.wallet
   ]);
 
-  const connectWallet = async () => {
+  const connectWallet = async (retryCount = 0): Promise<void> => {
     try {
       setError(null);
       setIsLoading(true);
-      if (wallet.connected) {
+      
+      // If already connected, just sync state
+      if (wallet.connected && wallet.publicKey) {
+        setIsLoading(false);
         return;
       }
+      
+      // If no wallet selected, show modal
       if (!wallet.wallet) {
         setVisible(true);
+        setIsLoading(false);
         return;
       }
-      await wallet.connect();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to connect wallet');
+      
+      // Try to connect with timeout
+      const connectPromise = wallet.connect();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout')), 10000)
+      );
+      
+      await Promise.race([connectPromise, timeoutPromise]);
+      
+      // Wait for state to sync
+      let attempts = 0;
+      while (attempts < 10 && (!wallet.connected || !wallet.publicKey)) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        attempts++;
+      }
+      
+      if (!wallet.connected || !wallet.publicKey) {
+        throw new Error('Connection state not updated');
+      }
+      
+    } catch (err: any) {
+      // Handle specific wallet adapter errors
+      let errorMessage = 'Failed to connect wallet';
+      let shouldRetry = false;
+      
+      if (err?.name === 'WalletAccountError') {
+        errorMessage = 'Connection was rejected. Please approve the request in your wallet.';
+      } else if (err?.name === 'WalletConnectionError') {
+        errorMessage = 'Unable to connect to wallet. Please try again.';
+        shouldRetry = retryCount < 2;
+      } else if (err?.name === 'WalletNotInstalledError') {
+        errorMessage = 'Wallet extension not found. Please install it first.';
+      } else if (err?.name === 'WalletNotReadyError') {
+        errorMessage = 'Wallet is not ready. Please refresh the page.';
+        shouldRetry = retryCount < 1;
+      } else if (err?.message?.includes('timeout')) {
+        errorMessage = 'Connection timeout. Please try again.';
+        shouldRetry = retryCount < 2;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
+      // Retry logic
+      if (shouldRetry && retryCount < 2) {
+        console.log(`Retrying wallet connection (attempt ${retryCount + 1})...`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        return connectWallet(retryCount + 1);
+      }
+      
+      setError(errorMessage);
+      console.error('Wallet connection error:', err);
     } finally {
       setIsLoading(false);
     }

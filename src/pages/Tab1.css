@@ -1,3 +1,19 @@
+/* Header styles */
+ion-header {
+  background: rgba(8, 12, 24, 0.95);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  padding: 0 clamp(16px, 4vw, 48px);
+}
+
+ion-toolbar {
+  --background: transparent;
+  --border-width: 0;
+  padding: 0;
+  max-width: min(1200px, 100%);
+  margin: 0 auto;
+}
+
 .launchpad-page {
   display: flex;
   flex-direction: column;
@@ -162,6 +178,41 @@
   font-size: 12px;
 }
 
+.leader-metric.up span {
+  color: #4ade80;
+}
+
+.leader-metric.down span {
+  color: #f87171;
+}
+
+/* Анимация обновления данных */
+.leaders-table li {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.leaders-table li.updating {
+  background-color: rgba(20, 184, 166, 0.1);
+  border-color: rgba(20, 184, 166, 0.3);
+  animation: pulse-update 0.6s ease;
+}
+
+@keyframes pulse-update {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+  margin-top: 16px;
+}
+
 .leaders-skeleton {
   display: flex;
   flex-direction: column;
@@ -197,19 +248,6 @@
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.wallet-kit-button .wallet-adapter-button-trigger {
-  border-radius: 999px;
-  background: linear-gradient(120deg, #818cf8, #a855f7);
-  border: none;
-  color: #fff;
-  font-weight: 600;
-  height: 36px;
-}
-
-.wallet-kit-button .wallet-adapter-button-trigger:hover {
-  opacity: 0.9;
 }
 
 .metrics-panel .empty-state {

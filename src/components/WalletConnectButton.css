@@ -1,0 +1,91 @@
+.wallet-connect-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wallet-connect-button {
+  --border-radius: 999px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  height: 40px;
+  font-weight: 600;
+  font-size: 14px;
+  margin: 0;
+  transition: all 0.2s ease;
+}
+
+.wallet-connect-button--connected {
+  --background: linear-gradient(120deg, #10b981, #059669);
+  --background-hover: linear-gradient(120deg, #059669, #047857);
+  --color: #ffffff;
+}
+
+.wallet-connect-button--connecting {
+  --background: rgba(148, 163, 184, 0.2);
+  --color: rgba(226, 232, 240, 0.8);
+  cursor: not-allowed;
+}
+
+.wallet-connect-button--disconnected {
+  --background: linear-gradient(120deg, #818cf8, #a855f7);
+  --background-hover: linear-gradient(120deg, #a855f7, #9333ea);
+  --color: #ffffff;
+}
+
+.wallet-connect-button__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+  gap: 2px;
+}
+
+.wallet-connect-button__name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.wallet-connect-button__address {
+  font-size: 11px;
+  opacity: 0.9;
+  font-weight: 400;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.wallet-connect-error {
+  --padding-start: 8px;
+  --padding-end: 8px;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  min-width: 32px;
+}
+
+.wallet-connect-error ion-icon {
+  font-size: 18px;
+}
+
+@media (max-width: 640px) {
+  .wallet-connect-button {
+    height: 36px;
+    font-size: 13px;
+    --padding-start: 12px;
+    --padding-end: 12px;
+  }
+
+  .wallet-connect-button__text {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .wallet-connect-button__name {
+    font-size: 12px;
+  }
+
+  .wallet-connect-button__address {
+    font-size: 10px;
+  }
+}
+

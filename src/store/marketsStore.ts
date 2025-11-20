@@ -151,8 +151,8 @@ export const useMarketsStore = create<MarketsStore>((set, get) => ({
                                 ...token,
                                 price: ticker.price,
                                 priceUsd: ticker.price,
-                                change24h: ticker.change24h,
-                                volume24h: ticker.volume24h,
+                                change24h: ticker.change24h ?? token.change24h,
+                                volume24h: ticker.volume24h ?? token.volume24h,
                                 liquidity: ticker.liquidity ?? token.liquidity
                             }
                             : token
@@ -164,9 +164,64 @@ export const useMarketsStore = create<MarketsStore>((set, get) => ({
             },
             onTokenUpdate: (token) => {
                 set((state) => {
-                    const updated = pruneFallback(upsertToken(state.spotlight, token));
-                    syncQueryCache(updated);
-                    return { spotlight: updated, pulse: recalcPulse(updated) };
+                    // Умное обновление токена - сохраняем существующие значения если новые undefined/null
+                    const updated = state.spotlight.map((existingToken) => {
+                        if (existingToken.id === token.id) {
+                            // Мержим данные, приоритет новым значениям, но сохраняем старые если новых нет
+                            const merged: LaunchToken = {
+                                ...existingToken,
+                                // Обновляем только если новое значение определено и не null
+                                name: token.name ?? existingToken.name,
+                                symbol: token.symbol ?? existingToken.symbol,
+                                priceUsd: token.priceUsd !== undefined && token.priceUsd !== null 
+                                    ? token.priceUsd 
+                                    : existingToken.priceUsd,
+                                priceSol: token.priceSol !== undefined && token.priceSol !== null 
+                                    ? token.priceSol 
+                                    : existingToken.priceSol,
+                                price: token.priceUsd !== undefined && token.priceUsd !== null 
+                                    ? token.priceUsd 
+                                    : (token.price !== undefined && token.price !== null 
+                                        ? token.price 
+                                        : existingToken.price),
+                                change24h: token.change24h !== undefined && token.change24h !== null 
+                                    ? token.change24h 
+                                    : existingToken.change24h,
+                                volume24h: token.volume24h !== undefined && token.volume24h !== null 
+                                    ? token.volume24h 
+                                    : existingToken.volume24h,
+                                liquidity: token.liquidity !== undefined && token.liquidity !== null 
+                                    ? token.liquidity 
+                                    : existingToken.liquidity,
+                                fdv: token.fdv !== undefined && token.fdv !== null 
+                                    ? token.fdv 
+                                    : existingToken.fdv,
+                                progress: token.progress !== undefined && token.progress !== null 
+                                    ? token.progress 
+                                    : existingToken.progress,
+                                score: token.score !== undefined && token.score !== null 
+                                    ? token.score 
+                                    : existingToken.score,
+                                iconUrl: token.iconUrl ?? existingToken.iconUrl,
+                                bannerUrl: token.bannerUrl ?? existingToken.bannerUrl,
+                                network: token.network ?? existingToken.network,
+                                createdAt: token.createdAt ?? existingToken.createdAt,
+                                raw: token.raw || existingToken.raw
+                            };
+                            return merged;
+                        }
+                        return existingToken;
+                    });
+                    
+                    // Если токена нет в списке, добавляем его
+                    const tokenExists = updated.some(t => t.id === token.id);
+                    const finalList = tokenExists 
+                        ? updated 
+                        : [...updated, token];
+                    
+                    const sanitized = pruneFallback(finalList);
+                    syncQueryCache(sanitized);
+                    return { spotlight: sanitized, pulse: recalcPulse(sanitized) };
                 });
             },
             onMint: (token) => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   IonButton,
   IonButtons,
@@ -11,8 +11,8 @@ import {
   IonToolbar
 } from '@ionic/react';
 import { refresh, sparkles } from 'ionicons/icons';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useSolana } from '../context/SolanaContext';
+import { WalletConnectButton } from '../components/WalletConnectButton';
 import { useSpotlightTokens } from '../hooks/useSpotlightTokens';
 import { LaunchToken } from '../services/launchMemeApi';
 import { usePrivySolana } from '../hooks/usePrivySolana';
@@ -84,12 +84,13 @@ const Tab1: React.FC = () => {
 
   const isBootstrapping = isLoading && !pools.length;
 
+  const [visibleCount, setVisibleCount] = React.useState(20);
   const leaders = useMemo(() => {
     return pools
       .slice()
       .sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0))
-      .slice(0, 6);
-  }, [pools]);
+      .slice(0, visibleCount);
+  }, [pools, visibleCount]);
 
   const lastUpdated = useMemo(() => {
     if (!pools.length) return null;
@@ -146,8 +147,8 @@ const Tab1: React.FC = () => {
 
   return (
     <IonPage>
-      <IonHeader translucent>
-        <IonToolbar color="transparent">
+      <IonHeader>
+        <IonToolbar>
           <IonTitle>Launch.Meme Telemetry</IonTitle>
           <IonButtons slot="end" className="wallet-toolbar-actions">
             <IonChip color="primary">{currentNetwork.name}</IonChip>
@@ -159,9 +160,7 @@ const Tab1: React.FC = () => {
             >
               <IonIcon icon={refresh} slot="icon-only" />
             </IonButton>
-            <div className="wallet-kit-button">
-              <WalletMultiButton />
-            </div>
+            <WalletConnectButton />
           </IonButtons>
         </IonToolbar>
       </IonHeader>
@@ -207,7 +206,7 @@ const Tab1: React.FC = () => {
                 <strong>Top pools by reported USD volume</strong>
               </div>
               <IonChip color="dark">
-                {isBootstrapping ? 'Loading…' : `${leaders.length} highlighted`}
+                {isBootstrapping ? 'Loading…' : `${pools.length} total, showing ${leaders.length}`}
               </IonChip>
             </header>
 
@@ -223,37 +222,55 @@ const Tab1: React.FC = () => {
                 ))}
               </div>
             ) : leaders.length ? (
-              <ul className="leaders-table">
-                {leaders.map((token: LaunchToken) => (
-                  <li key={token.id}>
-                    <div className="leader-token">
-                      <p>{token.name}</p>
-                      <small>{token.symbol}</small>
-                    </div>
-                    <div className="leader-metric">
-                      <span>${token.priceUsd.toFixed(6)}</span>
-                      <small>Price</small>
-                    </div>
-                    <div className="leader-metric">
-                      <span>
-                        {token.change24h >= 0 ? '+' : ''}
-                        {token.change24h.toFixed(2)}%
-                      </span>
-                      <small>24h</small>
-                    </div>
-                    <div className="leader-metric">
-                      <span>
-                        ${formatNumber(token.volume24h ?? 0, { maximumFractionDigits: 0 })}
-                      </span>
-                      <small>Volume</small>
-                    </div>
-                    <div className="leader-metric">
-                      <span>{formatNumber(token.progress ?? 0, { maximumFractionDigits: 1 })}%</span>
-                      <small>Progress</small>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="leaders-table">
+                  {leaders.map((token: LaunchToken) => (
+                    <li key={token.id}>
+                      <div className="leader-token">
+                        <p>{token.name}</p>
+                        <small>{token.symbol}</small>
+                      </div>
+                      <div className="leader-metric">
+                        <span>${token.priceUsd.toFixed(6)}</span>
+                        <small>Price</small>
+                      </div>
+                      <div className={`leader-metric ${token.change24h >= 0 ? 'up' : 'down'}`}>
+                        <span>
+                          {token.change24h >= 0 ? '+' : ''}
+                          {token.change24h !== undefined && token.change24h !== null 
+                            ? token.change24h.toFixed(2) 
+                            : '0.00'}%
+                        </span>
+                        <small>24h</small>
+                      </div>
+                      <div className="leader-metric">
+                        <span>
+                          ${formatNumber(token.volume24h ?? 0, { maximumFractionDigits: 0 })}
+                        </span>
+                        <small>Volume</small>
+                      </div>
+                      <div className="leader-metric">
+                        <span>
+                          {token.progress !== undefined && token.progress !== null 
+                            ? formatNumber(token.progress, { maximumFractionDigits: 1 }) 
+                            : '0.0'}%
+                        </span>
+                        <small>Progress</small>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {pools.length > visibleCount && (
+                  <div className="load-more-container">
+                    <IonButton
+                      fill="outline"
+                      onClick={() => setVisibleCount(prev => Math.min(prev + 20, pools.length))}
+                    >
+                      Load more ({pools.length - visibleCount} remaining)
+                    </IonButton>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="empty-state">
                 No spotlight tokens returned from the API. Verify the Centrifuge token or refresh the
