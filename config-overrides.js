@@ -9,7 +9,8 @@ module.exports = function override(config) {
     buffer: require.resolve('buffer/'),
     assert: require.resolve('assert/'),
     util: require.resolve('util/'),
-    process: require.resolve('process/browser')
+    process: require.resolve('process/browser'),
+    vm: require.resolve('vm-browserify')      // ← new
   };
 
   config.plugins = config.plugins || [];
@@ -22,4 +23,3 @@ module.exports = function override(config) {
 
   return config;
 };
-

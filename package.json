@@ -56,6 +56,7 @@
     "recharts": "^3.4.1",
     "typescript": "^4.1.3",
     "util": "^0.12.5",
+    "vm-browserify": "^1.1.2",
     "web-vitals": "^0.2.4",
     "workbox-background-sync": "^5.1.4",
     "workbox-broadcast-update": "^5.1.4",
