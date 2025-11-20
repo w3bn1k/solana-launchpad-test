@@ -18,6 +18,7 @@ import Tab3 from './pages/Tab3';
 import Tab4 from './pages/Tab4';
 import { SolanaProvider } from './context/SolanaContext';
 import { PrivyProvider } from './context/PrivyContext';
+import { WalletKitProvider } from './providers/WalletKitProvider';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -43,47 +44,49 @@ setupIonicReact();
 const App: React.FC = () => (
   <IonApp>
     <PrivyProvider>
-      <SolanaProvider>
-        <IonReactRouter>
-          <IonTabs>
-            <IonRouterOutlet>
-              <Route exact path="/tab1">
-                <Tab1 />
-              </Route>
-              <Route exact path="/tab2">
-                <Tab2 />
-              </Route>
-              <Route path="/tab3">
-                <Tab3 />
-              </Route>
-              <Route path="/tab4">
-                <Tab4 />
-              </Route>
-              <Route exact path="/">
-                <Redirect to="/tab1" />
-              </Route>
-            </IonRouterOutlet>
-            <IonTabBar slot="bottom">
-              <IonTabButton tab="tab1" href="/tab1">
-                <IonIcon aria-hidden="true" icon={wallet} />
-                <IonLabel>Wallet</IonLabel>
-              </IonTabButton>
-              <IonTabButton tab="tab2" href="/tab2">
-                <IonIcon aria-hidden="true" icon={card} />
-                <IonLabel>Tokens</IonLabel>
-              </IonTabButton>
-              <IonTabButton tab="tab3" href="/tab3">
-                <IonIcon aria-hidden="true" icon={list} />
-                <IonLabel>History</IonLabel>
-              </IonTabButton>
-              <IonTabButton tab="tab4" href="/tab4">
-                <IonIcon aria-hidden="true" icon={swapHorizontal} />
-                <IonLabel>Trade</IonLabel>
-              </IonTabButton>
-            </IonTabBar>
-          </IonTabs>
-        </IonReactRouter>
-      </SolanaProvider>
+      <WalletKitProvider>
+        <SolanaProvider>
+          <IonReactRouter>
+            <IonTabs>
+              <IonRouterOutlet>
+                <Route exact path="/tab1">
+                  <Tab1 />
+                </Route>
+                <Route exact path="/tab2">
+                  <Tab2 />
+                </Route>
+                <Route path="/tab3">
+                  <Tab3 />
+                </Route>
+                <Route path="/tab4">
+                  <Tab4 />
+                </Route>
+                <Route exact path="/">
+                  <Redirect to="/tab1" />
+                </Route>
+              </IonRouterOutlet>
+              <IonTabBar slot="bottom">
+                <IonTabButton tab="tab1" href="/tab1">
+                  <IonIcon aria-hidden="true" icon={wallet} />
+                  <IonLabel>Wallet</IonLabel>
+                </IonTabButton>
+                <IonTabButton tab="tab2" href="/tab2">
+                  <IonIcon aria-hidden="true" icon={card} />
+                  <IonLabel>Tokens</IonLabel>
+                </IonTabButton>
+                <IonTabButton tab="tab3" href="/tab3">
+                  <IonIcon aria-hidden="true" icon={list} />
+                  <IonLabel>History</IonLabel>
+                </IonTabButton>
+                <IonTabButton tab="tab4" href="/tab4">
+                  <IonIcon aria-hidden="true" icon={swapHorizontal} />
+                  <IonLabel>Trade</IonLabel>
+                </IonTabButton>
+              </IonTabBar>
+            </IonTabs>
+          </IonReactRouter>
+        </SolanaProvider>
+      </WalletKitProvider>
     </PrivyProvider>
   </IonApp>
 );

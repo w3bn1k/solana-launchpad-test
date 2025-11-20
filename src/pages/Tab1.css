@@ -1,381 +1,192 @@
-/* Wallet Content */
-.wallet-content {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-/* Wallet Container */
-.wallet-container {
-  padding: 20px;
-  max-width: 480px;
-  margin: 0 auto;
-}
-
-/* Connection Banner */
-.connection-banner {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 24px;
-  text-align: center;
-  margin: 20px 0;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.connection-banner h2 {
-  margin: 0 0 16px 0;
-  color: white;
-  font-size: 24px;
-  font-weight: 600;
-}
-
-.connection-banner p {
-  margin: 0 0 20px 0;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 16px;
-}
-
-/* Wallet Card */
-.wallet-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-radius: 24px;
-  padding: 24px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  margin-bottom: 16px;
-}
-
-/* Balance Section */
-.balance-section {
-  text-align: center;
-  padding: 20px 0;
-  border-bottom: 1px solid rgba(229, 231, 235, 0.8);
-  margin-bottom: 24px;
-}
-
-.balance-label {
-  font-size: 14px;
-  color: #6b7280;
-  margin-bottom: 8px;
-  font-weight: 500;
-}
-
-.balance-amount {
-  font-size: 36px;
-  font-weight: 700;
-  color: #111827;
-  margin-bottom: 8px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.balance-usd {
-  font-size: 16px;
-  color: #6b7280;
-  font-weight: 500;
-}
-
-/* Wallet Info */
-.wallet-info {
-  background: rgba(249, 250, 251, 0.8);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 24px;
-  border: 1px solid rgba(229, 231, 235, 0.8);
-}
-
-.wallet-address {
+.launchpad-page {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
+  flex-direction: column;
+  gap: 32px;
+  padding-bottom: 120px;
 }
 
-.wallet-address-label {
-  font-size: 14px;
-  color: #6b7280;
-  font-weight: 500;
-}
-
-.wallet-address-value {
-  font-size: 14px;
-  color: #111827;
-  font-weight: 600;
-  font-family: 'Monaco', 'Menlo', monospace;
-}
-
-.copy-button {
-  --color: #3b82f6;
-  --padding-start: 8px;
-  --padding-end: 8px;
-  height: 32px;
-}
-
-.network-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.network-label {
-  font-size: 14px;
-  color: #6b7280;
-  font-weight: 500;
-}
-
-.network-chip {
-  height: 24px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-/* Action Buttons */
-.action-buttons {
+.launchpad-hero {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  align-items: stretch;
 }
 
-.action-button {
-  height: 48px;
-  --border-radius: 12px;
-  font-weight: 600;
-  font-size: 16px;
+.launchpad-hero__intro {
+  padding: 32px;
+  border-radius: 28px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: radial-gradient(circle at top left, rgba(20, 184, 166, 0.25), transparent 60%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.75), rgba(8, 12, 24, 0.9));
+  box-shadow: 0 25px 60px rgba(8, 12, 24, 0.6);
 }
 
-.action-button.primary {
-  --background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+.launchpad-hero__intro h1 {
+  margin: 0 0 12px 0;
+  font-size: clamp(32px, 4vw, 48px);
 }
 
-.action-button.secondary {
-  --background: rgba(249, 250, 251, 0.9);
-  --color: #374151;
-  --border-color: #d1d5db;
-  --border-width: 1px;
-}
-
-.action-button:hover {
-  transform: translateY(-1px);
-}
-
-/* Login Section */
-.login-section {
-  text-align: center;
-  padding: 32px 0;
-}
-
-.login-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: white;
-  margin-bottom: 8px;
-}
-
-.login-subtitle {
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 24px;
-}
-
-.login-button {
-  --background: rgba(255, 255, 255, 0.9);
-  --color: #374151;
-  --border-radius: 16px;
-  height: 56px;
-  font-size: 18px;
-  font-weight: 600;
-  min-width: 200px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-}
-
-.login-button:hover {
-  --background: white;
-  transform: translateY(-1px);
-  box-shadow: 0 15px 25px rgba(0, 0, 0, 0.15);
-}
-
-/* User Info Card */
-.user-info-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  margin-bottom: 16px;
-}
-
-.user-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.user-avatar {
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 20px;
-  font-weight: 600;
-  margin-right: 16px;
-}
-
-.user-details h3 {
-  margin: 0 0 4px 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.user-details p {
+.launchpad-hero__intro p {
   margin: 0;
-  font-size: 14px;
-  color: #6b7280;
+  font-size: 16px;
+  color: rgba(226, 232, 240, 0.7);
+  max-width: 420px;
 }
 
-/* Quick Actions */
-.quick-actions {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.quick-actions-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: white;
-  margin-bottom: 16px;
-}
-
-.quick-actions-grid {
+.launchpad-hero__stats {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.hero-stat {
+  padding: 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(8, 12, 24, 0.7);
+  backdrop-filter: blur(16px);
+}
+
+.hero-stat p {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.hero-stat strong {
+  display: block;
+  margin-top: 12px;
+  font-size: 24px;
+}
+
+.spotlight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.terminal-wrapper {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+.terminal-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.order-form,
+.portfolio-card {
+  padding: 24px;
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(8, 12, 24, 0.75);
+  backdrop-filter: blur(16px);
+}
+
+.order-form h3,
+.portfolio-card h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+}
+
+.order-form form {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
-.quick-action-item {
-  background: rgba(255, 255, 255, 0.1);
+.order-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  color: rgba(226, 232, 240, 0.7);
+  gap: 6px;
+}
+
+.order-form input,
+.order-form select {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(51, 65, 85, 0.8);
   border-radius: 12px;
-  padding: 16px;
-  text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 12px;
+  color: #f8fafc;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.order-form button {
+  margin-top: 6px;
+  border-radius: 16px;
+  border: none;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  background: linear-gradient(120deg, #ec4899, #a855f7, #6366f1);
+  color: white;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.quick-action-item:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
+.order-form button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 15px 45px rgba(99, 102, 241, 0.4);
 }
 
-.quick-action-icon {
-  font-size: 24px;
-  color: white;
-  margin-bottom: 8px;
+.wallet-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.quick-action-label {
+.wallet-kit-button .wallet-adapter-button-trigger {
+  border-radius: 999px;
+  background: linear-gradient(120deg, #818cf8, #a855f7);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  height: 36px;
+}
+
+.wallet-kit-button .wallet-adapter-button-trigger:hover {
+  opacity: 0.9;
+}
+
+.portfolio-card ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.portfolio-card li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 14px;
-  color: white;
-  font-weight: 500;
 }
 
-/* Responsive Design */
-@media (max-width: 480px) {
-  .wallet-container {
-    padding: 16px;
-  }
-  
-  .wallet-card, .user-info-card {
-    padding: 20px;
-    border-radius: 20px;
-  }
-  
-  .balance-amount {
-    font-size: 28px;
-  }
-  
-  .action-buttons {
-    grid-template-columns: 1fr;
-  }
-  
-  .quick-actions-grid {
+.portfolio-card span {
+  font-family: 'Space Mono', monospace;
+}
+
+@media (max-width: 1200px) {
+  .terminal-wrapper {
     grid-template-columns: 1fr;
   }
 }
 
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-  .wallet-card, .user-info-card {
-    background: rgba(31, 41, 55, 0.95);
-    border: 1px solid rgba(75, 85, 99, 0.3);
+@media (max-width: 768px) {
+  .launchpad-hero {
+    grid-template-columns: 1fr;
   }
-  
-  .balance-amount {
-    color: #f3f4f6;
-  }
-  
-  .wallet-info {
-    background: rgba(55, 65, 81, 0.8);
-    border-color: rgba(75, 85, 99, 0.8);
-  }
-  
-  .wallet-address-value {
-    color: #f3f4f6;
-  }
-  
-  .wallet-address-label,
-  .network-label,
-  .balance-label,
-  .balance-usd {
-    color: #9ca3af;
-  }
-  
-  .action-button.secondary {
-    --background: #374151;
-    --color: #f3f4f6;
-    --border-color: #4b5563;
-  }
-  
-  .user-details h3 {
-    color: #f3f4f6;
-  }
-  
-  .user-details p {
-    color: #9ca3af;
-  }
-  
-  .login-button {
-    --background: rgba(31, 41, 55, 0.9);
-    --color: #f3f4f6;
-  }
-}
 
-/* Loading States */
-.loading-shimmer {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
+  .launchpad-hero__intro {
+    padding: 24px;
   }
 }

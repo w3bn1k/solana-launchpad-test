@@ -1,0 +1,93 @@
+.spotlight-card {
+  position: relative;
+  border: none;
+  border-radius: 20px;
+  padding: 20px;
+  background: linear-gradient(120deg, rgba(8, 12, 24, 0.95), rgba(35, 58, 102, 0.75));
+  color: #fff;
+  text-align: left;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  min-height: 220px;
+  backdrop-filter: blur(12px);
+}
+
+.spotlight-card--active {
+  border-color: rgba(103, 111, 255, 0.7);
+  box-shadow: 0 12px 30px rgba(103, 111, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.spotlight-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.spotlight-card__tag {
+  align-self: flex-start;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.spotlight-card__title {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.spotlight-card__symbol {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.spotlight-card__price {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.spotlight-card__change {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.spotlight-card__change.up {
+  color: #4ade80;
+}
+
+.spotlight-card__change.down {
+  color: #f87171;
+}
+
+.spotlight-card__footer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 13px;
+}
+
+.spotlight-card__footer p {
+  margin: 0;
+  opacity: 0.7;
+}
+
+.spotlight-card__progress {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.spotlight-card__progress span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #8b5cf6, #6366f1, #38bdf8);
+  border-radius: 999px;
+}
+

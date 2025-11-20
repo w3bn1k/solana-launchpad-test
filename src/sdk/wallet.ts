@@ -1,11 +1,11 @@
-import { Connection, PublicKey, clusterApiUrl, Transaction } from '@solana/web3.js';
+import { Connection, PublicKey, clusterApiUrl, Transaction, VersionedTransaction } from '@solana/web3.js';
 import { WalletState, SolanaSDKConfig } from './types';
 import { NETWORKS } from './utils';
 
 interface CustomWalletAdapter {
   publicKey: PublicKey;
-  signTransaction: (tx: Transaction) => Promise<Transaction>;
-  signAllTransactions: (txs: Transaction[]) => Promise<Transaction[]>;
+  signTransaction: (tx: Transaction | VersionedTransaction) => Promise<Transaction | VersionedTransaction>;
+  signAllTransactions: (txs: (Transaction | VersionedTransaction)[]) => Promise<(Transaction | VersionedTransaction)[]>;
 }
 
 export class SolanaWalletManager {
@@ -196,7 +196,7 @@ export class SolanaWalletManager {
   /**
    * Sign a transaction using the connected wallet
    */
-  async signTransaction(transaction: Transaction): Promise<Transaction> {
+  async signTransaction(transaction: Transaction | VersionedTransaction): Promise<Transaction | VersionedTransaction> {
     if (!this.walletState.connected) {
       throw new Error('Wallet not connected');
     }
@@ -216,7 +216,7 @@ export class SolanaWalletManager {
   /**
    * Sign multiple transactions
    */
-  async signAllTransactions(transactions: Transaction[]): Promise<Transaction[]> {
+  async signAllTransactions(transactions: (Transaction | VersionedTransaction)[]): Promise<(Transaction | VersionedTransaction)[]> {
     if (!this.walletState.connected) {
       throw new Error('Wallet not connected');
     }

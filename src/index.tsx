@@ -3,9 +3,10 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import reportWebVitals from './reportWebVitals';
+import '@solana/wallet-adapter-react-ui/styles.css';
 
 const container = document.getElementById('root');
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+// eslint-disable-next-line
 const root = createRoot(container!);
 root.render(
   <React.StrictMode>

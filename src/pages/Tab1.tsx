@@ -1,148 +1,119 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  IonAlert,
+  IonButton,
+  IonButtons,
+  IonChip,
   IonContent,
   IonHeader,
+  IonIcon,
   IonPage,
   IonTitle,
-  IonToolbar,
-  IonButton,
-  IonIcon,
-  IonLabel,
-  IonInput,
   IonToast,
-  IonLoading,
-  IonChip,
-  IonModal,
-  IonButtons,
-  IonAlert,
-  IonItem,
-  IonSpinner,
-  IonText
+  IonToolbar
 } from '@ionic/react';
-import {
-  wallet,
-  send,
-  copy,
-  refresh,
-  close,
-  swapHorizontal,
-  mail,
-  person,
-  logOut
-} from 'ionicons/icons';
+import { flash, sparkles, wifi, wallet, logOut, key, refresh } from 'ionicons/icons';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useSolana } from '../context/SolanaContext';
 import { usePrivyAuth } from '../context/PrivyContext';
 import { usePrivySolana } from '../hooks/usePrivySolana';
-import { formatSol, shortenAddress } from '../sdk/utils';
+import { SpotlightCard } from '../components/terminal/SpotlightCard';
+import { MarketTerminal } from '../components/terminal/MarketTerminal';
+import { useMarketsStore } from '../store/marketsStore';
+import { submitLaunchOrder } from '../services/launchMemeApi';
 import './Tab1.css';
 
 const Tab1: React.FC = () => {
-  const {
-    sdk,
-    walletState,
-    isLoading,
-    error,
-    connectWallet,
-    disconnectWallet,
-    switchNetwork
-  } = useSolana();
-
+  const { sdk, walletState, switchNetwork } = useSolana();
   const { login, logout, authenticated, user, ready } = usePrivyAuth();
   usePrivySolana();
 
-  const [balance, setBalance] = useState<number>(0);
-  const [showSendModal, setShowSendModal] = useState(false);
-  const [sendAddress, setSendAddress] = useState('');
-  const [sendAmount, setSendAmount] = useState('');
-  const [sendMemo, setSendMemo] = useState('');
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const spotlight = useMarketsStore((state) => state.spotlight);
+  const selectedToken = useMarketsStore((state) => state.selectedToken);
+  const pulse = useMarketsStore((state) => state.pulse);
+  const orderbook = useMarketsStore((state) => state.orderbook);
+  const trades = useMarketsStore((state) => state.trades);
+  const streamStatus = useMarketsStore((state) => state.streamStatus);
+  const pulseFeed = useMarketsStore((state) => state.pulseFeed);
+  const hydrate = useMarketsStore((state) => state.hydrate);
+  const selectToken = useMarketsStore((state) => state.selectToken);
+  const connectStreams = useMarketsStore((state) => state.connectStreams);
+  const disconnectStreams = useMarketsStore((state) => state.disconnectStreams);
+  const refreshSelected = useMarketsStore((state) => state.refreshSelected);
+  const isLoadingSnapshot = useMarketsStore((state) => state.isLoadingSnapshot);
+
+  const [orderIntent, setOrderIntent] = useState<'market' | 'limit'>('market');
+  const [orderCurrency, setOrderCurrency] = useState<'SOL' | 'USDC'>('SOL');
+  const [orderAmount, setOrderAmount] = useState('');
+  const [orderToast, setOrderToast] = useState<{ open: boolean; message: string; color?: string }>({
+    open: false,
+    message: ''
+  });
   const [showNetworkAlert, setShowNetworkAlert] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (walletState.connected) {
-      fetchBalance();
-    } else {
-      setBalance(0);
-    }
-  }, [walletState.connected]);
+    hydrate();
+    connectStreams();
+    return () => {
+      disconnectStreams();
+    };
+  }, [hydrate, connectStreams, disconnectStreams]);
 
-  const fetchBalance = async () => {
-    try {
-      const balanceInLamports = await sdk.wallet.getBalance();
-      setBalance(balanceInLamports);
-    } catch (err) {
-      console.error('Failed to fetch balance:', err);
-      showToastMessage('Failed to fetch balance');
+  const handleOrderSubmit = async () => {
+    if (!selectedToken) {
+      setOrderToast({ open: true, message: 'Select a token first', color: 'warning' });
+      return;
+    }
+
+    if (!walletState.connected || !walletState.publicKey) {
+      setOrderToast({ open: true, message: 'Connect your wallet', color: 'warning' });
+      return;
+    }
+
+    const payload = {
+      tokenId: selectedToken.id,
+      amount: Number(orderAmount),
+      currency: orderCurrency,
+      intent: orderIntent,
+      walletAddress: walletState.publicKey.toString(),
+      slippageBps: 50
+    };
+
+    const result = await submitLaunchOrder(payload);
+    if (result.success) {
+      setOrderToast({ open: true, message: 'Participation queued ✅', color: 'success' });
+      setOrderAmount('');
+      refreshSelected();
+    } else {
+      setOrderToast({ open: true, message: 'Order failed. Check logs', color: 'danger' });
     }
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchBalance();
+    await refreshSelected();
     setRefreshing(false);
   };
 
-  const handleCopyAddress = async () => {
-    if (walletState.publicKey) {
-      try {
-        await navigator.clipboard.writeText(walletState.publicKey.toString());
-        setCopied(true);
-        showToastMessage('Address copied to clipboard');
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        showToastMessage('Failed to copy address');
-      }
-    }
-  };
-
-  const handleSendTransaction = async () => {
-    if (!sendAddress || !sendAmount) {
-      showToastMessage('Please fill in all required fields');
-      return;
-    }
-
-    try {
-      const amountInLamports = parseFloat(sendAmount) * 1000000000;
-
-      const result = await sdk.transaction.sendSol({
-        recipientAddress: sendAddress,
-        amount: amountInLamports,
-        memo: sendMemo || undefined
-      });
-
-      if (result.success) {
-        showToastMessage(`Transaction sent! ${result.signature.substring(0, 8)}...`);
-        setShowSendModal(false);
-        setSendAddress('');
-        setSendAmount('');
-        setSendMemo('');
-        await fetchBalance();
-      } else {
-        showToastMessage(`Transaction failed: ${result.error}`);
-      }
-    } catch (err) {
-      showToastMessage('Transaction failed');
-    }
-  };
-
-  const showToastMessage = (message: string) => {
-    setToastMessage(message);
-    setShowToast(true);
-  };
+  const heroStats = useMemo(
+    () => [
+      { label: 'Total TVL', value: pulse ? `$${pulse.tvl.toLocaleString()}` : '—' },
+      { label: 'Participants', value: pulse ? pulse.participants.toLocaleString() : '—' },
+      { label: 'Avg. APR', value: pulse ? `${pulse.avgApr.toFixed(1)}%` : '—' },
+      { label: 'Hot Network', value: pulse?.hotNetwork ?? 'Solana' }
+    ],
+    [pulse]
+  );
 
   const currentNetwork = sdk.wallet.getCurrentNetwork();
-  const balanceInSol = balance * 0.000000001;
-  const balanceInUsd = balanceInSol * 180; // Mock price
 
   return (
     <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Wallet</IonTitle>
-          <IonButtons slot="end">
+      <IonHeader translucent>
+        <IonToolbar color="transparent">
+          <IonTitle>Launch.Meme Terminal</IonTitle>
+          <IonButtons slot="end" className="wallet-toolbar-actions">
             {walletState.connected && (
               <IonButton fill="clear" onClick={handleRefresh} disabled={refreshing}>
                 <IonIcon icon={refresh} />
@@ -151,275 +122,157 @@ const Tab1: React.FC = () => {
             <IonButton fill="clear" onClick={() => setShowNetworkAlert(true)}>
               <IonChip color="primary">{currentNetwork.name}</IonChip>
             </IonButton>
+            <div className="wallet-kit-button">
+              <WalletMultiButton />
+            </div>
           </IonButtons>
         </IonToolbar>
       </IonHeader>
 
-      <IonContent fullscreen className="wallet-content">
-        <IonHeader collapse="condense">
-          <IonToolbar>
-            <IonTitle size="large">Wallet</IonTitle>
-          </IonToolbar>
-        </IonHeader>
-
-        <div className="wallet-container">
-          {/* Error Display */}
-          {error && (
-            <div className="connection-banner" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
-              <IonText color="danger">
-                <p>{error}</p>
-              </IonText>
+      <IonContent fullscreen>
+        <div className="launchpad-page">
+          <section className="launchpad-hero">
+            <div className="launchpad-hero__intro">
+              <IonChip color="secondary">
+                <IonIcon icon={sparkles} />
+                Live launchpad
+              </IonChip>
+              <h1>Trade the vibe-first meme launches</h1>
+              <p>
+                Curated Solana memecoins, realtime orderflow, and guided participation flows for both keyboard warriors and mobile-first creators.
+              </p>
             </div>
-          )}
 
-          {/* Login Section */}
-          {!authenticated && ready && (
-            <div className="login-section">
-              <div className="login-title">Welcome to Solana Wallet</div>
-              <div className="login-subtitle">Connect your email to access wallet features and manage your Solana assets</div>
-              <IonButton
-                className="login-button"
-                onClick={login}
-                disabled={!ready}
-              >
-                <IonIcon icon={mail} slot="start" />
-                {!ready ? 'Loading...' : 'Login with Email'}
-              </IonButton>
+            <div className="launchpad-hero__stats">
+              {heroStats.map((stat) => (
+                <div key={stat.label} className="hero-stat">
+                  <p>{stat.label}</p>
+                  <strong>{stat.value}</strong>
+                </div>
+              ))}
             </div>
-          )}
+          </section>
 
-          {/* User Info */}
-          {authenticated && user?.email?.address && (
-            <div className="user-info-card">
-              <div className="user-header">
-                <div className="user-avatar">
-                  <IonIcon icon={person} />
-                </div>
-                <div className="user-details">
-                  <h3>Welcome back!</h3>
-                  <p>{user.email.address}</p>
-                </div>
-                <IonButton fill="clear" onClick={logout} color="danger" size="small">
-                  <IonIcon icon={logOut} />
-                </IonButton>
-              </div>
-              
-              {!walletState.connected && (
-                <IonButton
-                  className="action-button primary"
-                  onClick={() => connectWallet()}
-                  disabled={isLoading}
-                  expand="block"
+          <section className="spotlight-grid">
+            {spotlight.map((token) => (
+              <SpotlightCard
+                key={token.id}
+                token={token}
+                active={token.id === selectedToken?.id}
+                onSelect={(id) => selectToken(id)}
+              />
+            ))}
+          </section>
+
+          <section className="terminal-wrapper">
+            <MarketTerminal
+              token={selectedToken}
+              orderbook={orderbook}
+              trades={trades}
+              pulseFeed={pulseFeed}
+              streamStatus={streamStatus}
+              onRefreshSnapshot={() => refreshSelected()}
+            />
+
+            <div className="terminal-right">
+              <div className="order-form">
+                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3>Join {selectedToken?.symbol ?? 'Pool'}</h3>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#94a3b8' }}>
+                    <IonIcon icon={wifi} /> Stream {streamStatus}
+                  </span>
+                </header>
+
+                {!authenticated && (
+                  <IonButton fill="outline" onClick={login} disabled={!ready}>
+                    <IonIcon slot="start" icon={key} />
+                    Login with Privy
+                  </IonButton>
+                )}
+
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    handleOrderSubmit();
+                  }}
                 >
-                  <IonIcon icon={wallet} slot="start" />
-                  {isLoading ? 'Connecting...' : 'Connect Demo Wallet'}
-                </IonButton>
-              )}
-            </div>
-          )}
+                  <label>
+                    Intent
+                    <select value={orderIntent} onChange={(e) => setOrderIntent(e.target.value as 'market' | 'limit')}>
+                      <option value="market">Instant (market)</option>
+                      <option value="limit">Set target (limit)</option>
+                    </select>
+                  </label>
 
-          {/* Wallet Dashboard */}
-          {authenticated && walletState.connected && (
-            <>
-              {/* Balance Card */}
-              <div className="wallet-card">
-                <div className="balance-section">
-                  <div className="balance-label">Your Balance</div>
-                  <div className="balance-amount">
-                    {refreshing ? (
-                      <IonSpinner name="dots" />
-                    ) : (
-                      `${formatSol(balance)} SOL`
-                    )}
-                  </div>
-                  <div className="balance-usd">
-                    ≈ ${refreshing ? '...' : balanceInUsd.toFixed(2)} USD
-                  </div>
-                </div>
+                  <label>
+                    Currency
+                    <select value={orderCurrency} onChange={(e) => setOrderCurrency(e.target.value as 'SOL' | 'USDC')}>
+                      <option value="SOL">SOL</option>
+                      <option value="USDC">USDC</option>
+                    </select>
+                  </label>
 
-                {/* Wallet Info */}
-                <div className="wallet-info">
-                  <div className="wallet-address">
-                    <span className="wallet-address-label">Wallet Address</span>
-                    <span className="wallet-address-value">
-                      {walletState.publicKey ? shortenAddress(walletState.publicKey.toString()) : 'Not connected'}
-                    </span>
-                    {walletState.publicKey && (
-                      <IonButton
-                        className="copy-button"
-                        fill="clear"
-                        onClick={handleCopyAddress}
-                      >
-                        <IonIcon icon={copied ? close : copy} color={copied ? 'success' : 'primary'} />
-                      </IonButton>
-                    )}
-                  </div>
-                  
-                  <div className="network-info">
-                    <span className="network-label">Network</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <IonChip className="network-chip" color="primary">
-                        {currentNetwork.name}
-                      </IonChip>
-                      <IonButton
-                        fill="clear"
-                        size="small"
-                        onClick={() => setShowNetworkAlert(true)}
-                      >
-                        <IonIcon icon={swapHorizontal} />
-                      </IonButton>
-                    </div>
-                  </div>
-                </div>
+                  <label>
+                    Amount
+                    <input
+                      type="number"
+                      min="0"
+                      value={orderAmount}
+                      onChange={(e) => setOrderAmount(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </label>
 
-                {/* Action Buttons */}
-                <div className="action-buttons">
-                  <IonButton
-                    className="action-button primary"
-                    onClick={() => setShowSendModal(true)}
-                    disabled={balance === 0}
-                  >
-                    <IonIcon icon={send} slot="start" />
-                    Send SOL
-                  </IonButton>
-                  <IonButton
-                    className="action-button secondary"
-                    onClick={() => showToastMessage('Receive functionality coming soon!')}
-                  >
-                    <IonIcon icon={wallet} slot="start" />
-                    Receive
-                  </IonButton>
-                </div>
+                  <button type="submit" disabled={isLoadingSnapshot}>
+                    <IonIcon icon={flash} />
+                    &nbsp; Commit Liquidity
+                  </button>
+                </form>
               </div>
-            </>
-          )}
 
-          {/* Quick Actions */}
-          {authenticated && walletState.connected && (
-            <div className="quick-actions">
-              <div className="quick-actions-title">Quick Actions</div>
-              <div className="quick-actions-grid">
-                <div className="quick-action-item" onClick={handleRefresh}>
-                  <div className="quick-action-icon">
-                    <IonIcon icon={refresh} />
-                  </div>
-                  <div className="quick-action-label">Refresh Balance</div>
-                </div>
-                <div className="quick-action-item" onClick={() => setShowNetworkAlert(true)}>
-                  <div className="quick-action-icon">
-                    <IonIcon icon={swapHorizontal} />
-                  </div>
-                  <div className="quick-action-label">Switch Network</div>
-                </div>
-                <div className="quick-action-item" onClick={handleCopyAddress}>
-                  <div className="quick-action-icon">
-                    <IonIcon icon={copy} />
-                  </div>
-                  <div className="quick-action-label">Copy Address</div>
-                </div>
-                <div className="quick-action-item" onClick={async () => {
-                  if (authenticated) await logout();
-                  await disconnectWallet();
-                }}>
-                  <div className="quick-action-icon">
-                    <IonIcon icon={logOut} />
-                  </div>
-                  <div className="quick-action-label">Disconnect</div>
-                </div>
+              <div className="portfolio-card">
+                <h3>Wallet cockpit</h3>
+                {walletState.connected && walletState.publicKey ? (
+                  <ul>
+                    <li>
+                      <span>Address</span>
+                      <span>{walletState.publicKey.toBase58().slice(0, 4)}...{walletState.publicKey.toBase58().slice(-4)}</span>
+                    </li>
+                    <li>
+                      <span>Network</span>
+                      <span>{currentNetwork.name}</span>
+                    </li>
+                    <li>
+                      <span>Mode</span>
+                      <span>{orderIntent.toUpperCase()}</span>
+                    </li>
+                  </ul>
+                ) : (
+                  <p>Connect your Solana wallet or use demo mode to mirror flows.</p>
+                )}
               </div>
             </div>
-          )}
+          </section>
         </div>
 
-        {/* Send Modal */}
-        <IonModal isOpen={showSendModal} onDidDismiss={() => setShowSendModal(false)}>
-          <IonHeader>
-            <IonToolbar>
-              <IonTitle>Send SOL</IonTitle>
-              <IonButtons slot="end">
-                <IonButton onClick={() => setShowSendModal(false)}>
-                  <IonIcon icon={close} />
-                </IonButton>
-              </IonButtons>
-            </IonToolbar>
-          </IonHeader>
-          <IonContent className="wallet-content">
-            <div className="wallet-container">
-              <div className="wallet-card">
-                <IonItem>
-                  <IonLabel position="stacked">Recipient Address</IonLabel>
-                  <IonInput
-                    value={sendAddress}
-                    onIonChange={(e) => setSendAddress(e.detail.value!)}
-                    placeholder="Enter Solana address"
-                  />
-                </IonItem>
-                <IonItem>
-                  <IonLabel position="stacked">Amount (SOL)</IonLabel>
-                  <IonInput
-                    type="number"
-                    value={sendAmount}
-                    onIonChange={(e) => setSendAmount(e.detail.value!)}
-                    placeholder="0.00"
-                  />
-                </IonItem>
-                <IonItem>
-                  <IonLabel position="stacked">Memo (Optional)</IonLabel>
-                  <IonInput
-                    value={sendMemo}
-                    onIonChange={(e) => setSendMemo(e.detail.value!)}
-                    placeholder="Transaction memo"
-                  />
-                </IonItem>
-                
-                <IonButton
-                  className="action-button primary"
-                  onClick={handleSendTransaction}
-                  disabled={!sendAddress || !sendAmount}
-                  expand="block"
-                  style={{ marginTop: '20px' }}
-                >
-                  <IonIcon icon={send} slot="start" />
-                  Send Transaction
-                </IonButton>
-              </div>
-            </div>
-          </IonContent>
-        </IonModal>
-
-        {/* Network Selection Alert */}
         <IonAlert
           isOpen={showNetworkAlert}
           onDidDismiss={() => setShowNetworkAlert(false)}
           header="Select Network"
           buttons={[
-            {
-              text: 'Cancel',
-              role: 'cancel'
-            },
-            {
-              text: 'Mainnet',
-              handler: () => switchNetwork('mainnet-beta')
-            },
-            {
-              text: 'Testnet',
-              handler: () => switchNetwork('testnet')
-            },
-            {
-              text: 'Devnet',
-              handler: () => switchNetwork('devnet')
-            }
+            { text: 'Cancel', role: 'cancel' },
+            { text: 'Mainnet', handler: () => switchNetwork('mainnet-beta') },
+            { text: 'Testnet', handler: () => switchNetwork('testnet') }
           ]}
         />
 
         <IonToast
-          isOpen={showToast}
-          onDidDismiss={() => setShowToast(false)}
-          message={toastMessage}
-          duration={3000}
+          isOpen={orderToast.open}
+          message={orderToast.message}
+          color={orderToast.color}
+          duration={2000}
+          onDidDismiss={() => setOrderToast((prev) => ({ ...prev, open: false }))}
         />
-
-        <IonLoading isOpen={refreshing} message="Refreshing..." />
       </IonContent>
     </IonPage>
   );

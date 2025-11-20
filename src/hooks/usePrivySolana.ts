@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Keypair, Transaction } from '@solana/web3.js';
+import { Keypair, Transaction, VersionedTransaction } from '@solana/web3.js';
 import { usePrivyAuth } from '../context/PrivyContext';
 import { useSolana } from '../context/SolanaContext';
 
@@ -25,12 +25,18 @@ export const usePrivySolana = () => {
           // Подключаем кошелек к SDK
           await sdk.wallet.connectCustomWallet('Privy Email Wallet', {
             publicKey: keypair.publicKey,
-            signTransaction: async (tx: Transaction) => {
-              tx.sign(keypair);
+            signTransaction: async (tx: Transaction | VersionedTransaction) => {
+              if (tx instanceof Transaction) {
+                tx.sign(keypair);
+              }
               return tx;
             },
-            signAllTransactions: async (txs: Transaction[]) => {
-              txs.forEach((tx: Transaction) => tx.sign(keypair));
+            signAllTransactions: async (txs: (Transaction | VersionedTransaction)[]) => {
+              txs.forEach((tx) => {
+                if (tx instanceof Transaction) {
+                  tx.sign(keypair);
+                }
+              });
               return txs;
             }
           });
