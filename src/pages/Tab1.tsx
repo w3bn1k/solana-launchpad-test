@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   IonButton,
   IonButtons,
@@ -16,6 +16,7 @@ import { useSolana } from '../context/SolanaContext';
 import { useSpotlightTokens } from '../hooks/useSpotlightTokens';
 import { LaunchToken } from '../services/launchMemeApi';
 import { usePrivySolana } from '../hooks/usePrivySolana';
+import { useMarketsStore } from '../store/marketsStore';
 import './Tab1.css';
 
 const formatNumber = (value: number, options: Intl.NumberFormatOptions = {}) =>
@@ -26,14 +27,32 @@ const Tab1: React.FC = () => {
   usePrivySolana();
 
   const {
-    data: tokens = [],
+    data: spotlightTokens = [],
     isLoading,
     isFetching,
     refetch
   } = useSpotlightTokens();
 
+  const tokens = useMarketsStore((state) => state.spotlight);
+  const setSpotlight = useMarketsStore((state) => state.setSpotlight);
+  const connectStreams = useMarketsStore((state) => state.connectStreams);
+  const disconnectStreams = useMarketsStore((state) => state.disconnectStreams);
+
+  useEffect(() => {
+    connectStreams();
+    return () => disconnectStreams();
+  }, [connectStreams, disconnectStreams]);
+
+  useEffect(() => {
+    if (spotlightTokens.length) {
+      setSpotlight(spotlightTokens);
+    }
+  }, [spotlightTokens, setSpotlight]);
+
+  const pools = tokens.length ? tokens : spotlightTokens;
+
   const summary = useMemo(() => {
-    if (!tokens.length) {
+    if (!pools.length) {
       return {
         totalLiquiditySol: 0,
         totalVolumeUsd: 0,
@@ -43,13 +62,13 @@ const Tab1: React.FC = () => {
       };
     }
 
-    const totalLiquiditySol = tokens.reduce((sum, token) => sum + (token.liquidity ?? 0), 0);
-    const totalVolumeUsd = tokens.reduce((sum, token) => sum + (token.volume24h ?? 0), 0);
+    const totalLiquiditySol = pools.reduce((sum, token) => sum + (token.liquidity ?? 0), 0);
+    const totalVolumeUsd = pools.reduce((sum, token) => sum + (token.volume24h ?? 0), 0);
     const avgProgress =
-      tokens.reduce((sum, token) => sum + (token.progress ?? 0), 0) / tokens.length;
+      pools.reduce((sum, token) => sum + (token.progress ?? 0), 0) / pools.length;
     const avgChange =
-      tokens.reduce((sum, token) => sum + (token.change24h ?? 0), 0) / tokens.length;
-    const totalHolders = tokens.reduce(
+      pools.reduce((sum, token) => sum + (token.change24h ?? 0), 0) / pools.length;
+    const totalHolders = pools.reduce(
       (sum, token) => sum + (token.raw?.holders ?? token.score ?? 0),
       0
     );
@@ -61,18 +80,20 @@ const Tab1: React.FC = () => {
       avgChange,
       totalHolders
     };
-  }, [tokens]);
+  }, [pools]);
+
+  const isBootstrapping = isLoading && !pools.length;
 
   const leaders = useMemo(() => {
-    return tokens
+    return pools
       .slice()
       .sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0))
       .slice(0, 6);
-  }, [tokens]);
+  }, [pools]);
 
   const lastUpdated = useMemo(() => {
-    if (!tokens.length) return null;
-    const latest = tokens
+    if (!pools.length) return null;
+    const latest = pools
       .slice()
       .sort(
         (a, b) =>
@@ -82,7 +103,7 @@ const Tab1: React.FC = () => {
     return latest
       ? new Date(latest.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : null;
-  }, [tokens]);
+  }, [pools]);
 
   const currentNetwork = sdk.wallet.getCurrentNetwork();
 
@@ -186,11 +207,11 @@ const Tab1: React.FC = () => {
                 <strong>Top pools by reported USD volume</strong>
               </div>
               <IonChip color="dark">
-                {isLoading ? 'Loading…' : `${leaders.length} highlighted`}
+                {isBootstrapping ? 'Loading…' : `${leaders.length} highlighted`}
               </IonChip>
             </header>
 
-            {isLoading ? (
+            {isBootstrapping ? (
               <div className="leaders-skeleton">
                 {Array.from({ length: 5 }).map((_, idx) => (
                   <div key={`skeleton-${idx}`} className="leaders-skeleton__row">
