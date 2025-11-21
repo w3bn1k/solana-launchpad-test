@@ -122,13 +122,6 @@ const Tab1: React.FC = () => {
       sublabel: 'Across spotlight pools'
     },
     {
-      label: '24h volume (USD)',
-      value: summary.totalVolumeUsd
-        ? `$${formatNumber(summary.totalVolumeUsd, { maximumFractionDigits: 0 })}`
-        : '—',
-      sublabel: 'Reported by API'
-    },
-    {
       label: 'Avg. progress',
       value: `${summary.avgProgress ? summary.avgProgress.toFixed(1) : '0.0'}%`,
       sublabel: 'Towards pump.fun migration'
@@ -138,6 +131,14 @@ const Tab1: React.FC = () => {
       value: `${summary.avgChange ? summary.avgChange.toFixed(2) : '0.00'}%`,
       sublabel: 'Rolling 24h'
     },
+    {
+      label: '24h volume (USD)',
+      value: summary.totalVolumeUsd
+        ? `$${formatNumber(summary.totalVolumeUsd, { maximumFractionDigits: 0 })}`
+        : '—',
+      sublabel: 'Reported by API'
+    },
+
     {
       label: 'Total holders',
       value: summary.totalHolders ? summary.totalHolders.toLocaleString() : '—',
@@ -152,14 +153,6 @@ const Tab1: React.FC = () => {
           <IonTitle>Launch.Meme Telemetry</IonTitle>
           <IonButtons slot="end" className="wallet-toolbar-actions">
             <IonChip color="primary">{currentNetwork.name}</IonChip>
-            <IonButton
-              fill="clear"
-              onClick={() => refetch()}
-              disabled={isFetching}
-              className="toolbar-refresh"
-            >
-              <IonIcon icon={refresh} slot="icon-only" />
-            </IonButton>
             <WalletConnectButton />
           </IonButtons>
         </IonToolbar>

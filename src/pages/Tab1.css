@@ -144,13 +144,125 @@ ion-toolbar {
 
 .leaders-table li {
   display: grid;
-  grid-template-columns: 2fr repeat(4, minmax(120px, 1fr));
-  gap: 16px;
+  grid-template-columns: 2fr repeat(4, minmax(100px, 1fr));
+  gap: 12px;
   padding: 14px 18px;
   border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.12);
   background: rgba(14, 22, 41, 0.9);
   align-items: center;
+}
+
+.leaders-skeleton__row {
+  display: grid;
+  grid-template-columns: 2fr repeat(4, minmax(100px, 1fr));
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+@media (max-width: 595px) {
+  .leaders-table li {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .leader-metric {
+    text-align: left;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .leader-metric span {
+    font-size: 14px;
+  }
+
+  .leader-metric small {
+    font-size: 11px;
+  }
+
+  .launchpad-hero {
+    gap: 16px;
+  }
+
+  .launchpad-hero__intro {
+    padding: 20px;
+    border-radius: 20px;
+    text-align: center;
+  }
+
+  .launchpad-hero__intro h1 {
+    font-size: 24px;
+    margin-bottom: 16px;
+    line-height: 1.3;
+  }
+
+  .launchpad-hero__intro p {
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  .launchpad-hero__intro code {
+    font-size: 12px;
+    word-break: break-all;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .hero-updated {
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .launchpad-hero__stats {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .launchpad-hero__stats--condensed {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .hero-stat {
+    padding: 16px;
+    border-radius: 16px;
+    text-align: center;
+    gap: 6px;
+  }
+
+  .hero-stat--wide {
+    grid-column: span 2;
+  }
+
+  .hero-stat p {
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+
+  .hero-stat strong {
+    font-size: 20px;
+  }
+
+  .hero-stat span {
+    font-size: 11px;
+  }
+
+  .hero-actions ion-button {
+    width: 100%;
+    max-width: 280px;
+  }
 }
 
 .leader-token p {
@@ -186,7 +298,6 @@ ion-toolbar {
   color: #f87171;
 }
 
-/* Анимация обновления данных */
 .leaders-table li {
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
