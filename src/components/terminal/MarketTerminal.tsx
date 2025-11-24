@@ -135,10 +135,6 @@ export const MarketTerminal: React.FC<MarketTerminalProps> = ({
                   <p>Price action • 24h</p>
                   <strong>${token ? token.price.toFixed(4) : '0.0000'}</strong>
                 </div>
-                <div className={token && token.change24h >= 0 ? 'pill pill--up' : 'pill pill--down'}>
-                  {token && token.change24h >= 0 ? '+' : ''}
-                  {token ? token.change24h.toFixed(2) : '0.00'}%
-                </div>
               </div>
 
               <div className="chart-wrapper">

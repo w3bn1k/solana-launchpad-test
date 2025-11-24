@@ -40,29 +40,6 @@ type MarketsStore = {
 const MAX_TOKENS = 120;
 
 const isFallbackToken = (token: LaunchToken) => Boolean(token.isFallback || token.raw?.isFallback);
-
-const recalcPulse = (tokens: LaunchToken[]): LaunchMarketPulse | null => {
-    if (!tokens.length) {
-        return null;
-    }
-
-    const tvl = tokens.reduce((sum, token) => sum + (token.liquidity ?? 0), 0);
-    const participants = tokens.reduce(
-        (sum, token) => sum + (token.raw?.holders ?? token.score ?? 0),
-        0
-    );
-    const avgApr =
-        tokens.reduce((sum, token) => sum + (token.change24h ?? 0), 0) / tokens.length;
-
-    return {
-        tvl,
-        participants,
-        avgApr,
-        hotNetwork: 'Solana',
-        updatedAt: new Date().toISOString()
-    };
-};
-
 const upsertToken = (list: LaunchToken[], token: LaunchToken): LaunchToken[] => {
     const index = list.findIndex((item) => item.id === token.id);
     if (index >= 0) {
@@ -80,6 +57,40 @@ const pruneFallback = (tokens: LaunchToken[]) => {
         return tokens;
     }
     return tokens.filter((token) => !isFallbackToken(token));
+};
+
+const recalcPulse = (tokens: LaunchToken[]): LaunchMarketPulse | null => {
+    if (!tokens.length) {
+        return null;
+    }
+
+    const activeTokens = tokens.length;
+
+    const tvl = tokens.reduce((sum, token) => sum + (token.liquidity ?? 0), 0);
+    const participants = tokens.reduce(
+        (sum, token) => sum + (token.raw?.holders ?? token.holders ?? 0),
+        0
+    );
+
+    const activeTokenPrices = tokens
+        .filter(token => (token.volume24h ?? 0) > 100)
+        .map(token => token.priceUsd ?? 0);
+
+    const avgPrice = activeTokenPrices.length > 0
+        ? activeTokenPrices.reduce((sum, price) => sum + price, 0) / activeTokenPrices.length
+        : tokens.reduce((sum, token) => sum + (token.priceUsd ?? 0), 0) / tokens.length;
+
+    const totalVolume = tokens.reduce((sum, token) => sum + (token.volume24h ?? 0), 0);
+
+    return {
+        activeTokens,
+        tvl: parseFloat(tvl.toFixed(2)),
+        participants,
+        avgPrice: parseFloat(avgPrice.toFixed(6)),
+        totalVolume: parseFloat(totalVolume.toFixed(2)),
+        hotNetwork: 'Solana',
+        updatedAt: new Date().toISOString()
+    };
 };
 
 const syncQueryCache = (tokens: LaunchToken[]) => {
@@ -141,6 +152,62 @@ export const useMarketsStore = create<MarketsStore>((set, get) => ({
             }));
         };
 
+        const generateTokenUpdates = (tokens: LaunchToken[]): any[] => {
+            return tokens.map(token => {
+                const priceChange = (Math.random() - 0.5) * 0.01;
+                const volumeChange = (Math.random() - 0.5) * 0.06;
+                const progressChange = (Math.random() - 0.5) * 0.008;
+
+                let holdersChange = 0;
+                if (Math.random() > 0.6) {
+                    holdersChange = Math.random() > 0.5 ? 1 : -1;
+                }
+
+                const liquidityChange = (Math.random() - 0.5) * 0.008;
+
+                const newPrice = Math.max(0.000001, token.priceUsd * (1 + priceChange));
+                const newVolume = Math.max(10, token.volume24h * (1 + volumeChange));
+                const newProgress = Math.max(0, Math.min(100, token.progress + progressChange));
+                const newHolders = Math.max(1, token.holders + holdersChange);
+                const newLiquidity = Math.max(0, token.liquidity * (1 + liquidityChange));
+
+                return {
+                    ...token,
+                    priceUsd: parseFloat(newPrice.toFixed(8)),
+                    price: parseFloat(newPrice.toFixed(8)),
+                    volume24h: parseFloat(newVolume.toFixed(2)),
+                    progress: parseFloat(newProgress.toFixed(2)),
+                    holders: newHolders,
+                    liquidity: parseFloat(newLiquidity.toFixed(2)),
+                    fdv: parseFloat((newPrice * 1000000).toFixed(2)),
+                    raw: {
+                        ...token.raw,
+                        priceUsd: parseFloat(newPrice.toFixed(8)),
+                        volumeUsd: parseFloat(newVolume.toFixed(2)),
+                        progress: parseFloat(newProgress.toFixed(2)),
+                        holders: newHolders,
+                        _balanceSol: parseFloat(newLiquidity.toFixed(2))
+                    }
+                };
+            });
+        };
+
+        const updateMarketData = () => {
+            set((state) => {
+                if (!state.spotlight.length) {
+                    return { pulse: null };
+                }
+
+                const updatedTokens = generateTokenUpdates(state.spotlight);
+                const newPulse = recalcPulse(updatedTokens);
+
+                return {
+                    spotlight: updatedTokens,
+                    pulse: newPulse
+                };
+            });
+        };
+
         launchMemeStream.connect({
             onStatusChange: (status) => set({ streamStatus: status }),
             onTicker: (ticker: TickerUpdate) => {
@@ -151,57 +218,56 @@ export const useMarketsStore = create<MarketsStore>((set, get) => ({
                                 ...token,
                                 price: ticker.price,
                                 priceUsd: ticker.price,
-                                change24h: ticker.change24h ?? token.change24h,
                                 volume24h: ticker.volume24h ?? token.volume24h,
-                                liquidity: ticker.liquidity ?? token.liquidity
+                                liquidity: ticker.liquidity ?? token.liquidity,
+                                fdv: ticker.price * 1000000
                             }
                             : token
                     );
                     const sanitized = pruneFallback(updated);
                     syncQueryCache(sanitized);
-                    return { spotlight: sanitized, pulse: recalcPulse(sanitized) };
+
+                    const newPulse = recalcPulse(sanitized);
+                    return {
+                        spotlight: sanitized,
+                        pulse: newPulse
+                    };
                 });
             },
             onTokenUpdate: (token) => {
                 set((state) => {
-                    // Умное обновление токена - сохраняем существующие значения если новые undefined/null
                     const updated = state.spotlight.map((existingToken) => {
                         if (existingToken.id === token.id) {
-                            // Мержим данные, приоритет новым значениям, но сохраняем старые если новых нет
                             const merged: LaunchToken = {
                                 ...existingToken,
-                                // Обновляем только если новое значение определено и не null
                                 name: token.name ?? existingToken.name,
                                 symbol: token.symbol ?? existingToken.symbol,
-                                priceUsd: token.priceUsd !== undefined && token.priceUsd !== null 
-                                    ? token.priceUsd 
+                                priceUsd: token.priceUsd !== undefined && token.priceUsd !== null
+                                    ? token.priceUsd
                                     : existingToken.priceUsd,
-                                priceSol: token.priceSol !== undefined && token.priceSol !== null 
-                                    ? token.priceSol 
+                                priceSol: token.priceSol !== undefined && token.priceSol !== null
+                                    ? token.priceSol
                                     : existingToken.priceSol,
-                                price: token.priceUsd !== undefined && token.priceUsd !== null 
-                                    ? token.priceUsd 
-                                    : (token.price !== undefined && token.price !== null 
-                                        ? token.price 
+                                price: token.priceUsd !== undefined && token.priceUsd !== null
+                                    ? token.priceUsd
+                                    : (token.price !== undefined && token.price !== null
+                                        ? token.price
                                         : existingToken.price),
-                                change24h: token.change24h !== undefined && token.change24h !== null 
-                                    ? token.change24h 
-                                    : existingToken.change24h,
-                                volume24h: token.volume24h !== undefined && token.volume24h !== null 
-                                    ? token.volume24h 
+                                volume24h: token.volume24h !== undefined && token.volume24h !== null
+                                    ? token.volume24h
                                     : existingToken.volume24h,
-                                liquidity: token.liquidity !== undefined && token.liquidity !== null 
-                                    ? token.liquidity 
+                                liquidity: token.liquidity !== undefined && token.liquidity !== null
+                                    ? token.liquidity
                                     : existingToken.liquidity,
-                                fdv: token.fdv !== undefined && token.fdv !== null 
-                                    ? token.fdv 
+                                fdv: token.fdv !== undefined && token.fdv !== null
+                                    ? token.fdv
                                     : existingToken.fdv,
-                                progress: token.progress !== undefined && token.progress !== null 
-                                    ? token.progress 
+                                progress: token.progress !== undefined && token.progress !== null
+                                    ? token.progress
                                     : existingToken.progress,
-                                score: token.score !== undefined && token.score !== null 
-                                    ? token.score 
-                                    : existingToken.score,
+                                holders: token.holders !== undefined && token.holders !== null
+                                    ? token.holders
+                                    : existingToken.holders,
                                 iconUrl: token.iconUrl ?? existingToken.iconUrl,
                                 bannerUrl: token.bannerUrl ?? existingToken.bannerUrl,
                                 network: token.network ?? existingToken.network,
@@ -212,16 +278,20 @@ export const useMarketsStore = create<MarketsStore>((set, get) => ({
                         }
                         return existingToken;
                     });
-                    
-                    // Если токена нет в списке, добавляем его
+
                     const tokenExists = updated.some(t => t.id === token.id);
-                    const finalList = tokenExists 
-                        ? updated 
+                    const finalList = tokenExists
+                        ? updated
                         : [...updated, token];
-                    
+
                     const sanitized = pruneFallback(finalList);
                     syncQueryCache(sanitized);
-                    return { spotlight: sanitized, pulse: recalcPulse(sanitized) };
+
+                    const newPulse = recalcPulse(sanitized);
+                    return {
+                        spotlight: sanitized,
+                        pulse: newPulse
+                    };
                 });
             },
             onMint: (token) => {
@@ -229,7 +299,11 @@ export const useMarketsStore = create<MarketsStore>((set, get) => ({
                 set((state) => {
                     const updated = pruneFallback(upsertToken(state.spotlight, token));
                     syncQueryCache(updated);
-                    return { spotlight: updated, pulse: recalcPulse(updated) };
+                    const newPulse = recalcPulse(updated);
+                    return {
+                        spotlight: updated,
+                        pulse: newPulse
+                    };
                 });
             },
             onOrderbook: (update: OrderbookUpdate) => {
@@ -250,7 +324,13 @@ export const useMarketsStore = create<MarketsStore>((set, get) => ({
             }
         });
 
+        const dataInterval = setInterval(updateMarketData, 2000);
+
         launchMemeStream.subscribeGlobal();
+
+        return () => {
+            clearInterval(dataInterval);
+        };
     },
 
     disconnectStreams: () => {

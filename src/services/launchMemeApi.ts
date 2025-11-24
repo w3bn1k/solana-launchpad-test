@@ -1,4 +1,5 @@
 import { launchMemeConfig } from '../config/launchMeme';
+import tokensData from './tokens.json';
 
 export type RawLaunchToken = {
     token: string;
@@ -18,7 +19,6 @@ export type RawLaunchToken = {
     mint_time?: number;
     volumeUsd?: number;
     volumeSol?: number;
-    change24h?: number;
     price?: number;
     [key: string]: unknown;
 };
@@ -30,13 +30,12 @@ export type LaunchToken = {
     price: number;
     priceUsd: number;
     priceSol: number;
-    change24h: number;
     liquidity: number;
     fdv: number;
     volume24h: number;
     progress: number;
     network: string;
-    score: number;
+    holders: number;
     iconUrl?: string;
     bannerUrl?: string;
     createdAt: string;
@@ -60,9 +59,11 @@ export type LaunchTrade = {
 };
 
 export type LaunchMarketPulse = {
+    activeTokens: number;
     tvl: number;
     participants: number;
-    avgApr: number;
+    avgPrice: number;
+    totalVolume: number;
     hotNetwork: string;
     updatedAt: string;
 };
@@ -76,100 +77,31 @@ export type LaunchOrderPayload = {
     walletAddress: string;
 };
 
-const fallbackTokens: LaunchToken[] = [
-    {
-        id: 'vibe-001',
-        name: 'Vibe Chain',
-        symbol: 'VIBE',
-        price: 0.023,
-        priceUsd: 0.023,
-        priceSol: 0.023 / 180,
-        change24h: 12.4,
-        liquidity: 125_000,
-        fdv: 4_500_000,
-        volume24h: 890_000,
-        progress: 64,
-        network: 'Solana',
-        score: 92,
-        bannerUrl: 'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1400&q=80',
-        createdAt: new Date().toISOString(),
-        isFallback: true,
-        raw: {
-            token: 'vibe-001',
-            name: 'Vibe Chain',
-            symbol: 'VIBE',
-            priceUsd: 0.023,
-            _balanceSol: 125_000,
-            holders: 92,
-            metadataUri: '',
-            photo: null,
-            isFallback: true
-        } as RawLaunchToken
-    },
-    {
-        id: 'meme-777',
-        name: 'Neon Cat',
-        symbol: 'NEON',
-        price: 0.0042,
-        priceUsd: 0.0042,
-        priceSol: 0.0042 / 180,
-        change24h: -3.1,
-        liquidity: 87_000,
-        fdv: 1_230_000,
-        volume24h: 410_000,
-        progress: 38,
-        network: 'Solana',
-        score: 81,
-        bannerUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80',
-        createdAt: new Date().toISOString(),
-        isFallback: true,
-        raw: {
-            token: 'meme-777',
-            name: 'Neon Cat',
-            symbol: 'NEON',
-            priceUsd: 0.0042,
-            _balanceSol: 87_000,
-            holders: 81,
-            metadataUri: '',
-            photo: null,
-            isFallback: true
-        } as RawLaunchToken
-    },
-    {
-        id: 'pulse-404',
-        name: 'Quantum Pepe',
-        symbol: 'QPEPE',
-        price: 0.000093,
-        priceUsd: 0.000093,
-        priceSol: 0.000093 / 180,
-        change24h: 28.7,
-        liquidity: 210_000,
-        fdv: 6_750_000,
-        volume24h: 1_800_000,
-        progress: 92,
-        network: 'Solana',
-        score: 97,
-        bannerUrl: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1400&q=80',
-        createdAt: new Date().toISOString(),
-        isFallback: true,
-        raw: {
-            token: 'pulse-404',
-            name: 'Quantum Pepe',
-            symbol: 'QPEPE',
-            priceUsd: 0.000093,
-            _balanceSol: 210_000,
-            holders: 97,
-            metadataUri: '',
-            photo: null,
-            isFallback: true
-        } as RawLaunchToken
-    }
-];
+const serviceTokens: LaunchToken[] = Object.values(tokensData.tokens).map(token => ({
+    id: token.token,
+    name: token.name,
+    symbol: token.symbol,
+    priceUsd: token.priceUsd ?? token.price ?? 0,
+    priceSol: token.priceSol ?? 0,
+    price: token.priceUsd ?? token.price ?? 0,
+    liquidity: token._balanceSol ?? 0,
+    fdv: token.marketCapUsd ?? 0,
+    volume24h: token.volumeUsd ?? 0,
+    progress: token.progress ?? 0,
+    network: 'Solana',
+    holders: token.holders ?? 0,
+    iconUrl: token.photo ?? undefined,
+    bannerUrl: token.metadataUri ?? undefined,
+    createdAt: token.mint_time ? new Date(token.mint_time).toISOString() : new Date().toISOString(),
+    raw: token
+}));
 
 const fallbackPulse: LaunchMarketPulse = {
+    activeTokens: 123,
     tvl: 42_000_000,
     participants: 183_421,
-    avgApr: 38,
+    totalVolume: 123,
+    avgPrice: 0.000123,
     hotNetwork: 'Solana',
     updatedAt: new Date().toISOString()
 };
@@ -210,13 +142,12 @@ const mapToken = (raw: RawLaunchToken): LaunchToken => ({
     priceUsd: raw.priceUsd ?? raw.price ?? 0,
     priceSol: raw.priceSol ?? 0,
     price: raw.priceUsd ?? raw.price ?? 0,
-    change24h: raw.change24h ?? 0,
     liquidity: raw._balanceSol ?? 0,
     fdv: raw.marketCapUsd ?? 0,
     volume24h: raw.volumeUsd ?? 0,
     progress: raw.progress ?? 0,
     network: 'Solana',
-    score: raw.holders ?? 0,
+    holders: raw.holders ?? 0,
     iconUrl: raw.photo ?? undefined,
     bannerUrl: raw.metadataUri ?? undefined,
     createdAt: raw.mint_time ? new Date(raw.mint_time).toISOString() : new Date().toISOString(),
@@ -237,10 +168,10 @@ async function postTokensRequest(body: Record<string, unknown>): Promise<LaunchT
 export async function fetchSpotlightTokens(page = 1, list = 'spotlight', version = 1): Promise<LaunchToken[]> {
     try {
         const tokens = await postTokensRequest({ page, list, version });
-        return tokens.length ? tokens : fallbackTokens;
+        return tokens.length ? tokens : serviceTokens;
     } catch (error) {
-        console.warn('[launchmeme] fallback tokens', error);
-        return fallbackTokens;
+        console.warn('[launchmeme] service tokens', error);
+        return serviceTokens;
     }
 }
 
@@ -249,8 +180,8 @@ export async function fetchTokenDetail(tokenId: string): Promise<LaunchToken | u
         const [token] = await postTokensRequest({ id: tokenId });
         return token;
     } catch (error) {
-        console.warn('[launchmeme] fallback token detail', error);
-        return fallbackTokens.find((token) => token.id === tokenId) ?? fallbackTokens[0];
+        console.warn('[launchmeme] service token detail', error);
+        return serviceTokens.find((token) => token.id === tokenId) ?? serviceTokens[0];
     }
 }
 
@@ -270,7 +201,7 @@ export async function fetchOrderbook(tokenId: string): Promise<LaunchOrderbookLe
         return result.data;
     } catch (error) {
         console.warn('[launchmeme] fallback orderbook', error);
-        const token = fallbackTokens.find((t) => t.id === tokenId) ?? fallbackTokens[0];
+        const token = serviceTokens.find((t) => t.id === tokenId) ?? serviceTokens[0];
         return Array.from({ length: 12 }).map((_, idx) => ({
             price: token.price * (1 + (idx - 6) * 0.002),
             amount: Math.random() * 80_000,
@@ -287,7 +218,7 @@ export async function fetchRecentTrades(tokenId: string): Promise<LaunchTrade[]>
         console.warn('[launchmeme] fallback trades', error);
         return Array.from({ length: 15 }).map((_, idx) => ({
             id: `${tokenId}-${idx}`,
-            price: fallbackTokens[0].price * (1 + (Math.random() - 0.5) * 0.01),
+            price: serviceTokens[0].price * (1 + (Math.random() - 0.5) * 0.01),
             amount: Math.random() * 45_000,
             side: Math.random() > 0.5 ? 'buy' : 'sell',
             wallet: `So111...${Math.random().toString(16).slice(2, 7)}`,
@@ -308,4 +239,3 @@ export async function submitLaunchOrder(payload: LaunchOrderPayload): Promise<{ 
         return { success: false };
     }
 }
-

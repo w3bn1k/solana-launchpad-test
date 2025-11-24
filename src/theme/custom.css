@@ -1,0 +1,204 @@
+/* theme/custom.css */
+
+/* Кастомная панель табов */
+.custom-tab-bar {
+    --background: linear-gradient(135deg, var(--ion-color-primary) 0%, var(--ion-color-secondary) 100%);
+    --border: none;
+    height: 70px;
+    padding: 8px 0;
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Кастомные табы */
+.custom-tab {
+    --color: rgba(255, 255, 255, 0.7);
+    --color-selected: white;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.custom-tab::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 0;
+    height: 3px;
+    background: var(--ion-color-warning);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateX(-50%);
+    border-radius: 0 0 2px 2px;
+}
+
+.custom-tab.tab-selected::before {
+    width: 70%;
+}
+
+.custom-tab:hover {
+    --color: white;
+    transform: translateY(-2px);
+}
+
+.custom-tab:hover::before {
+    width: 50%;
+}
+
+/* Иконки табов */
+.tab-icon {
+    font-size: 1.4em;
+    margin-bottom: 4px;
+    transition: all 0.3s ease;
+}
+
+.custom-tab:hover .tab-icon {
+    transform: scale(1.1);
+}
+
+.custom-tab.tab-selected .tab-icon {
+    transform: scale(1.15);
+    color: var(--ion-color-warning);
+}
+
+/* Лейблы табов */
+.tab-label {
+    font-size: 0.75em;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.custom-tab:hover .tab-label {
+    transform: translateY(-1px);
+}
+
+/* Анимации для страниц */
+ion-router-outlet {
+    position: relative;
+}
+
+ion-router-outlet > * {
+    animation: pageSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes pageSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Скрытие нативной навигации на мобильных */
+@media (max-width: 768px) {
+    /* Скрываем браузерную навигацию */
+    ion-tab-bar {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* Увеличиваем табы для удобства на мобильных */
+    .custom-tab-bar {
+        height: 80px;
+        padding: 12px 0;
+    }
+
+    .tab-icon {
+        font-size: 1.6em;
+    }
+
+    .tab-label {
+        font-size: 0.8em;
+    }
+}
+
+/* Десктопные улучшения */
+@media (min-width: 769px) {
+    .custom-tab-bar {
+        max-width: 600px;
+        margin: 0 auto;
+        border-radius: 20px 20px 0 0;
+        margin-bottom: 10px;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* Градиентные эффекты */
+.gradient-text {
+    background: linear-gradient(135deg, var(--ion-color-warning) 0%, var(--ion-color-tertiary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Анимация пульсации для активных элементов */
+@keyframes pulse-glow {
+    0% {
+        box-shadow: 0 0 0 0 rgba(var(--ion-color-warning-rgb), 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(var(--ion-color-warning-rgb), 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(var(--ion-color-warning-rgb), 0);
+    }
+}
+
+.pulse-glow {
+    animation: pulse-glow 2s infinite;
+}
+
+/* Кастомный скроллбар */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--ion-color-warning);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--ion-color-warning-tint);
+}
+
+/* Улучшенные хедеры для страниц */
+ion-header {
+    --background: linear-gradient(135deg, var(--ion-color-primary) 0%, var(--ion-color-secondary) 100%);
+}
+
+ion-toolbar {
+    --background: transparent;
+    --color: white;
+}
+
+/* Фикс для безопасных зон на iOS */
+@supports (padding: max(0px)) {
+    .custom-tab-bar {
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+}
+
+/* Плавные переходы */
+* {
+    transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Улучшенные карточки */
+ion-card {
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+ion-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}

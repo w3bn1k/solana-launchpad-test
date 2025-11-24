@@ -43,10 +43,6 @@ export const SpotlightCard: React.FC<SpotlightCardProps> = ({ token, active, onS
           <span className="spotlight-card__symbol">{token.symbol}</span>
         </div>
         <div className="spotlight-card__price">${token.price.toFixed(4)}</div>
-        <div className={`spotlight-card__change ${token.change24h >= 0 ? 'up' : 'down'}`}>
-          {token.change24h >= 0 ? '+' : ''}
-          {token.change24h.toFixed(2)}%
-        </div>
       </div>
       <div className="spotlight-card__footer">
         <div>
